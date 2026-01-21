@@ -289,6 +289,8 @@ export const dict = {
   "language.en": "Английский",
   "language.zh": "Китайский",
   "language.ko": "Корейский",
+  "language.zh": "Китайский (упрощённый)",
+  "language.zht": "Китайский (традиционный)",
   "language.de": "Немецкий",
   "language.es": "Испанский",
   "language.fr": "Французский",
