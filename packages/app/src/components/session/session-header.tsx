@@ -176,73 +176,41 @@ export function SessionHeader() {
               {/*   <SessionLspIndicator /> */}
               {/*   <SessionMcpIndicator /> */}
               {/* </div> */}
-              <div class="flex items-center gap-1">
-                <div class="hidden md:block shrink-0">
+              <div class="flex items-center gap-1 h-full">
+                <div class="flex items-center mt-0.5">
                   <TooltipKeybind
-                    title={language.t("command.review.toggle")}
-                    keybind={command.keybind("review.toggle")}
+                    class="hidden md:block shrink-0"
+                    title={language.t("command.terminal.toggle")}
+                    keybind={command.keybind("terminal.toggle")}
                   >
                     <Button
                       variant="ghost"
-                      class="group/review-toggle size-6 p-0"
-                      onClick={() => view().reviewPanel.toggle()}
-                      aria-label={language.t("command.review.toggle")}
-                      aria-expanded={view().reviewPanel.opened()}
-                      aria-controls="review-panel"
-                      tabIndex={showReview() ? 0 : -1}
+                      class="group/terminal-toggle size-6 p-0 px-0 py-0"
+                      onClick={() => view().terminal.toggle()}
+                      aria-label={language.t("command.terminal.toggle")}
+                      aria-expanded={view().terminal.opened()}
+                      aria-controls="terminal-panel"
                     >
                       <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                         <Icon
                           size="small"
-                          name={view().reviewPanel.opened() ? "layout-right-full" : "layout-right"}
-                          class="group-hover/review-toggle:hidden"
+                          name={view().terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                          class="group-hover/terminal-toggle:hidden"
                         />
                         <Icon
                           size="small"
-                          name="layout-right-partial"
-                          class="hidden group-hover/review-toggle:inline-block"
+                          name="layout-bottom-partial"
+                          class="hidden group-hover/terminal-toggle:inline-block"
                         />
                         <Icon
                           size="small"
-                          name={view().reviewPanel.opened() ? "layout-right" : "layout-right-full"}
-                          class="hidden group-active/review-toggle:inline-block"
+                          name={view().terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                          class="hidden group-active/terminal-toggle:inline-block"
                         />
                       </div>
                     </Button>
                   </TooltipKeybind>
                 </div>
-                <TooltipKeybind
-                  class="hidden md:block shrink-0"
-                  title={language.t("command.terminal.toggle")}
-                  keybind={command.keybind("terminal.toggle")}
-                >
-                  <Button
-                    variant="ghost"
-                    class="group/terminal-toggle size-6 p-0"
-                    onClick={() => view().terminal.toggle()}
-                    aria-label={language.t("command.terminal.toggle")}
-                    aria-expanded={view().terminal.opened()}
-                    aria-controls="terminal-panel"
-                  >
-                    <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
-                      <Icon
-                        size="small"
-                        name={view().terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
-                        class="group-hover/terminal-toggle:hidden"
-                      />
-                      <Icon
-                        size="small"
-                        name="layout-bottom-partial"
-                        class="hidden group-hover/terminal-toggle:inline-block"
-                      />
-                      <Icon
-                        size="small"
-                        name={view().terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
-                        class="hidden group-active/terminal-toggle:inline-block"
-                      />
-                    </div>
-                  </Button>
-                </TooltipKeybind>
               </div>
               <Show when={showShare()}>
                 <div class="flex items-center">
