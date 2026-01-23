@@ -45,6 +45,7 @@ import { DialogSelectFile } from "@/components/dialog-select-file"
 import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
 import { DialogFork } from "@/components/dialog-fork"
+import { DialogCheckpoint } from "@/components/dialog-checkpoint"
 import { useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
 import { useNavigate, useParams } from "@solidjs/router"
@@ -805,6 +806,16 @@ export default function Page() {
       slash: "fork",
       disabled: !params.id || visibleUserMessages().length === 0,
       onSelect: () => dialog.show(() => <DialogFork />),
+    },
+    {
+      id: "session.checkpoint",
+      title: language.t("command.session.checkpoint"),
+      description: language.t("command.session.checkpoint.description"),
+      category: "Session",
+      slash: "checkpoint",
+      keybind: "mod+shift+z",
+      disabled: !params.id || visibleUserMessages().length === 0,
+      onSelect: () => dialog.show(() => <DialogCheckpoint />),
     },
     ...(sync.data.config.share !== "disabled"
       ? [

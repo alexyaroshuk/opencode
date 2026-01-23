@@ -7,6 +7,7 @@ import { MessageV2 } from "../../session/message-v2"
 import { SessionPrompt } from "../../session/prompt"
 import { SessionCompaction } from "../../session/compaction"
 import { SessionRevert } from "../../session/revert"
+import { SessionCheckpoint } from "../../session/checkpoint"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "../../session/todo"
@@ -897,6 +898,74 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
         const session = await SessionRevert.unrevert({ sessionID })
+        return c.json(session)
+      },
+    )
+    .get(
+      "/:sessionID/checkpoint",
+      describeRoute({
+        summary: "List checkpoints",
+        description:
+          "Get a list of all checkpoints in a session. Each checkpoint represents a point in time that can be restored to rewind the session and file changes.",
+        operationId: "session.checkpoint.list",
+        responses: {
+          200: {
+            description: "List of checkpoints",
+            content: {
+              "application/json": {
+                schema: resolver(SessionCheckpoint.Info.array()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          sessionID: SessionCheckpoint.list.schema.shape.sessionID,
+        }),
+      ),
+      async (c) => {
+        const sessionID = c.req.valid("param").sessionID
+        const checkpoints = await SessionCheckpoint.list({ sessionID })
+        return c.json(checkpoints)
+      },
+    )
+    .post(
+      "/:sessionID/checkpoint/restore",
+      describeRoute({
+        summary: "Restore checkpoint",
+        description:
+          "Restore the session and files to a specific checkpoint. This will revert all file changes made after the checkpoint and remove messages after that point.",
+        operationId: "session.checkpoint.restore",
+        responses: {
+          200: {
+            description: "Updated session after restore",
+            content: {
+              "application/json": {
+                schema: resolver(Session.Info),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          sessionID: SessionCheckpoint.restore.schema.shape.sessionID,
+        }),
+      ),
+      validator("json", SessionCheckpoint.restore.schema.omit({ sessionID: true })),
+      async (c) => {
+        const sessionID = c.req.valid("param").sessionID
+        const body = c.req.valid("json")
+        log.info("checkpoint restore", { sessionID, ...body })
+        const session = await SessionCheckpoint.restore({
+          sessionID,
+          ...body,
+        })
         return c.json(session)
       },
     )

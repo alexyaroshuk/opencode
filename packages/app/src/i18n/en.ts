@@ -76,6 +76,14 @@ export const dict = {
   "command.session.share.description": "Share this session and copy the URL to clipboard",
   "command.session.unshare": "Unshare session",
   "command.session.unshare.description": "Stop sharing this session",
+  "command.session.checkpoint": "Restore checkpoint",
+  "command.session.checkpoint.description": "Rewind session and files to a previous point",
+
+  "checkpoint.description": "Select a message to restore the session and files to that point",
+  "checkpoint.empty": "No checkpoints available",
+  "checkpoint.toast.restored.title": "Checkpoint restored",
+  "checkpoint.toast.restored.description": "Session and files have been restored",
+  "checkpoint.toast.error.title": "Failed to restore checkpoint",
 
   "palette.search.placeholder": "Search files and commands",
   "palette.empty": "No results found",

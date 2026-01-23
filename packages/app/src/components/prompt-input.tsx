@@ -44,6 +44,7 @@ import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { ImagePreview } from "@opencode-ai/ui/image-preview"
 import { ModelSelectorPopover } from "@/components/dialog-select-model"
 import { DialogSelectModelUnpaid } from "@/components/dialog-select-model-unpaid"
+import { DialogCheckpoint } from "@/components/dialog-checkpoint"
 import { useProviders } from "@/hooks/use-providers"
 import { useCommand } from "@/context/command"
 import { Persist, persisted } from "@/utils/persist"
@@ -1920,6 +1921,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <div class="flex items-center gap-2">
               <SessionContextUsage />
               <Show when={store.mode === "normal"}>
+                <Show when={params.id}>
+                  <Tooltip placement="top" value={language.t("command.session.checkpoint")}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      class="size-6"
+                      onClick={() => dialog.show(() => <DialogCheckpoint />)}
+                      aria-label={language.t("command.session.checkpoint")}
+                    >
+                      <Icon name="clock-rewind" class="size-4.5" />
+                    </Button>
+                  </Tooltip>
+                </Show>
                 <Tooltip placement="top" value={language.t("prompt.action.attachFile")}>
                   <Button
                     type="button"
