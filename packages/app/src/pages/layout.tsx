@@ -1489,7 +1489,7 @@ export default function Layout(props: ParentProps) {
         onMouseEnter={() => prefetchSession(props.session, "high")}
         onFocus={() => prefetchSession(props.session, "high")}
       >
-        <div class="flex items-center gap-1 w-full">
+        <div class="flex items-center gap-1 w-full cursor-pointer ">
           <div
             class="shrink-0 size-6 flex items-center justify-center"
             style={{ color: tint() ?? "var(--icon-interactive-base)" }}
@@ -1909,7 +1909,7 @@ export default function Layout(props: ParentProps) {
         type="button"
         aria-label={projectName()}
         classList={{
-          "flex items-center justify-center size-10 p-1 rounded-lg overflow-hidden transition-colors cursor-default": true,
+          "flex items-center justify-center size-10 p-1 rounded-lg overflow-hidden transition-colors cursor-pointer": true,
           "bg-transparent border-2 border-icon-strong-base hover:bg-surface-base-hover": selected(),
           "bg-transparent border border-transparent hover:bg-surface-base-hover hover:border-border-weak-base":
             !selected() && !open(),
