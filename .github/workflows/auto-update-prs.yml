@@ -77,6 +77,7 @@ jobs:
           SUCCESS_COUNT=0
           FAILURE_COUNT=0
           SKIPPED_COUNT=0
+          CONFLICTS=""
 
           # Convert JSON array to bash array
           mapfile -t BRANCH_ARRAY < <(echo "$BRANCHES" | jq -r '.[]')
@@ -100,7 +101,7 @@ jobs:
             fi
 
             echo "Attempting rebase onto upstream/dev..."
-            git rebase upstream/dev
+            git rebase upstream/dev 2>&1 > /tmp/rebase.log
             REBASE_CODE=$?
 
             if [ $REBASE_CODE -eq 0 ]; then
@@ -114,9 +115,20 @@ jobs:
                 ((FAILURE_COUNT++))
               fi
             else
-              echo "✗ Rebase conflict on $branch - skipping"
+              # Count conflicted files
+              CONFLICT_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null | wc -l)
+              CONFLICT_LINES=$(git diff --check 2>/dev/null | grep "conflict" | wc -l)
+
+              echo "✗ Rebase conflict on $branch"
+              echo "  └─ Files: $CONFLICT_FILES, Conflict markers: $CONFLICT_LINES"
+
+              # List conflicted files
+              git diff --name-only --diff-filter=U 2>/dev/null | sed 's/^/     • /'
+
               git rebase --abort 2>/dev/null || true
               ((FAILURE_COUNT++))
+
+              CONFLICTS="$CONFLICTS$(printf '\n    • %s (%d files, %d markers)' "$branch" "$CONFLICT_FILES" "$CONFLICT_LINES")"
             fi
           done
           set -e
@@ -125,9 +137,15 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "SUMMARY"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✓ Successfully updated: $SUCCESS_COUNT"
-          echo "✗ Failed to update: $FAILURE_COUNT"
+          echo "✓ Updated: $SUCCESS_COUNT"
+          echo "✗ Conflicts: $FAILURE_COUNT"
           echo "⊘ Skipped: $SKIPPED_COUNT"
+
+          if [ -n "$CONFLICTS" ]; then
+            echo ""
+            echo "Branches with conflicts:"
+            echo "$CONFLICTS"
+          fi
 
       - name: Report results
         if: always()
