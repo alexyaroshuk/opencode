@@ -94,9 +94,9 @@ jobs:
               continue
             fi
 
-            echo "Attempting rebase onto origin/dev..."
+            echo "Attempting rebase onto upstream/dev..."
 
-            if git rebase origin/dev; then
+            if git rebase upstream/dev; then
               # Rebase successful
               if git push --force-with-lease origin "$branch"; then
                 echo "✓ Successfully updated $branch"
