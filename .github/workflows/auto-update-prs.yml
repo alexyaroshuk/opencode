@@ -71,6 +71,7 @@ jobs:
       - name: Update PR branches
         id: update-branches
         run: |
+          set +e
           BRANCHES='${{ steps.get-prs.outputs.branches }}'
 
           SUCCESS_COUNT=0
@@ -79,6 +80,7 @@ jobs:
 
           # Convert JSON array to bash array
           mapfile -t BRANCH_ARRAY < <(echo "$BRANCHES" | jq -r '.[]')
+          echo "Found ${#BRANCH_ARRAY[@]} branches to process"
 
           for branch in "${BRANCH_ARRAY[@]}"; do
             [ -z "$branch" ] && continue
@@ -88,30 +90,36 @@ jobs:
             echo "Processing branch: $branch"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            if ! git checkout "$branch" 2>/dev/null; then
-              echo "✗ Failed to checkout branch: $branch"
+            git checkout "$branch" 2>/dev/null
+            CHECKOUT_CODE=$?
+
+            if [ $CHECKOUT_CODE -ne 0 ]; then
+              echo "✗ Failed to checkout branch: $branch (exit: $CHECKOUT_CODE)"
               ((SKIPPED_COUNT++))
               continue
             fi
 
             echo "Attempting rebase onto upstream/dev..."
+            git rebase upstream/dev
+            REBASE_CODE=$?
 
-            if git rebase upstream/dev; then
-              # Rebase successful
-              if git push --force-with-lease origin "$branch"; then
+            if [ $REBASE_CODE -eq 0 ]; then
+              git push --force-with-lease origin "$branch" 2>&1
+              PUSH_CODE=$?
+              if [ $PUSH_CODE -eq 0 ]; then
                 echo "✓ Successfully updated $branch"
                 ((SUCCESS_COUNT++))
               else
-                echo "✗ Failed to push $branch after successful rebase"
+                echo "✗ Failed to push $branch (exit: $PUSH_CODE)"
                 ((FAILURE_COUNT++))
               fi
             else
-              # Rebase failed - abort and skip
-              echo "✗ Rebase conflict on $branch - skipping (manual intervention needed)"
-              git rebase --abort || true
+              echo "✗ Rebase conflict on $branch - skipping"
+              git rebase --abort 2>/dev/null || true
               ((FAILURE_COUNT++))
             fi
           done
+          set -e
 
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
