@@ -1,0 +1,129 @@
+name: Auto-Update PR Branches
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual trigger from Actions tab
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update-prs:
+    runs-on: ubuntu-latest
+    name: Update PR Branches with Latest dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for rebasing
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/anomalyco/opencode.git || true
+          echo "Upstream remote configured"
+
+      - name: Fetch from all remotes
+        run: |
+          git fetch --all
+          echo "Fetch completed"
+
+      - name: Sync fork's dev branch with upstream
+        id: sync-dev
+        run: |
+          echo "Syncing fork's dev branch..."
+          git checkout dev
+
+          if git merge --ff-only upstream/dev; then
+            git push origin dev
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "✓ Fork's dev branch successfully synced with upstream/dev"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "✗ Fork's dev branch could not be fast-forwarded (has diverged or conflicts)"
+            exit 1
+          fi
+
+      - name: Get list of open PR branches
+        id: get-prs
+        run: |
+          # Get all open PRs authored by the fork owner, extract branch names
+          BRANCHES=$(gh pr list \
+            --author "${{ github.repository_owner }}" \
+            --state open \
+            --json headRefName \
+            --jq '.[].headRefName')
+
+          # Convert to JSON array for easier processing
+          echo "branches=$(echo "$BRANCHES" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update PR branches
+        id: update-branches
+        run: |
+          BRANCHES='${{ steps.get-prs.outputs.branches }}'
+
+          SUCCESS_COUNT=0
+          FAILURE_COUNT=0
+          SKIPPED_COUNT=0
+
+          echo "branches=$(echo "$BRANCHES" | jq -r '.[]')" | while IFS= read -r branch; do
+            [ -z "$branch" ] && continue
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Processing branch: $branch"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            if ! git checkout "$branch" 2>/dev/null; then
+              echo "✗ Failed to checkout branch: $branch"
+              ((SKIPPED_COUNT++))
+              continue
+            fi
+
+            echo "Attempting rebase onto origin/dev..."
+
+            if git rebase origin/dev; then
+              # Rebase successful
+              if git push --force-with-lease origin "$branch"; then
+                echo "✓ Successfully updated $branch"
+                ((SUCCESS_COUNT++))
+              else
+                echo "✗ Failed to push $branch after successful rebase"
+                ((FAILURE_COUNT++))
+              fi
+            else
+              # Rebase failed - abort and skip
+              echo "✗ Rebase conflict on $branch - skipping (manual intervention needed)"
+              git rebase --abort || true
+              ((FAILURE_COUNT++))
+            fi
+          done
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "SUMMARY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✓ Successfully updated: $SUCCESS_COUNT"
+          echo "✗ Failed to update: $FAILURE_COUNT"
+          echo "⊘ Skipped: $SKIPPED_COUNT"
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "Workflow execution completed"
+          if [ "${{ steps.sync-dev.outputs.status }}" == "success" ]; then
+            echo "✓ Fork sync: Successful"
+          else
+            echo "✗ Fork sync: Failed - check logs above"
+          fi
