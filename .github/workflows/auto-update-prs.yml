@@ -77,7 +77,10 @@ jobs:
           FAILURE_COUNT=0
           SKIPPED_COUNT=0
 
-          while IFS= read -r branch; do
+          # Convert JSON array to bash array
+          mapfile -t BRANCH_ARRAY < <(echo "$BRANCHES" | jq -r '.[]')
+
+          for branch in "${BRANCH_ARRAY[@]}"; do
             [ -z "$branch" ] && continue
 
             echo ""
@@ -108,7 +111,7 @@ jobs:
               git rebase --abort || true
               ((FAILURE_COUNT++))
             fi
-          done < <(echo "$BRANCHES" | jq -r '.[]')
+          done
 
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
