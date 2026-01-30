@@ -44,7 +44,7 @@ export namespace File {
 
   export const Content = z
     .object({
-      type: z.literal("text"),
+      type: z.enum(["text", "binary"]),
       content: z.string(),
       diff: z.string().optional(),
       patch: z
@@ -108,6 +108,10 @@ export namespace File {
     if (bins.some((mark) => sub.includes(mark))) return true
 
     return false
+  }
+
+  function isImage(mimeType: string): boolean {
+    return mimeType.startsWith("image/")
   }
 
   export const Event = {
@@ -276,6 +280,64 @@ export namespace File {
     }))
   }
 
+  const binaryExtensions = new Set([
+    "exe",
+    "dll",
+    "pdb",
+    "bin",
+    "so",
+    "dylib",
+    "o",
+    "a",
+    "lib",
+    "wav",
+    "mp3",
+    "ogg",
+    "flac",
+    "aac",
+    "wma",
+    "m4a",
+    "mp4",
+    "avi",
+    "mov",
+    "wmv",
+    "flv",
+    "webm",
+    "mkv",
+    "zip",
+    "tar",
+    "gz",
+    "bz2",
+    "7z",
+    "rar",
+    "xz",
+    "lz",
+    "pdf",
+    "doc",
+    "docx",
+    "ppt",
+    "pptx",
+    "xls",
+    "xlsx",
+    "dmg",
+    "iso",
+    "img",
+    "vmdk",
+    "ttf",
+    "otf",
+    "woff",
+    "woff2",
+    "eot",
+    "sqlite",
+    "db",
+    "mdb",
+  ])
+
+  function isBinaryByExtension(filepath: string): boolean {
+    const ext = path.extname(filepath).toLowerCase().slice(1)
+    return binaryExtensions.has(ext)
+  }
+
   export async function read(file: string): Promise<Content> {
     using _ = log.time("read", { file })
     const project = Instance.project
@@ -287,6 +349,11 @@ export namespace File {
       throw new Error(`Access denied: path escapes project directory`)
     }
 
+    // Fast path: check extension before any filesystem operations
+    if (isBinaryByExtension(file)) {
+      return { type: "binary", content: "" }
+    }
+
     const bunFile = Bun.file(full)
 
     if (!(await bunFile.exists())) {
@@ -294,11 +361,15 @@ export namespace File {
     }
 
     const encode = await shouldEncode(bunFile)
+    const mimeType = bunFile.type || "application/octet-stream"
+
+    if (encode && !isImage(mimeType)) {
+      return { type: "binary", content: "", mimeType }
+    }
 
     if (encode) {
       const buffer = await bunFile.arrayBuffer().catch(() => new ArrayBuffer(0))
       const content = Buffer.from(buffer).toString("base64")
-      const mimeType = bunFile.type || "application/octet-stream"
       return { type: "text", content, mimeType, encoding: "base64" }
     }
 
