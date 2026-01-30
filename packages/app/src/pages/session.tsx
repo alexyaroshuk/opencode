@@ -2798,8 +2798,13 @@ export default function Page() {
                                 <Match when={state()?.loaded && isBinary()}>
                                   <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
                                     <Mark class="w-14 opacity-10" />
-                                    <div class="text-14-regular text-text-weak max-w-56">
-                                      {language.t("session.files.binaryContent")}
+                                    <div class="flex flex-col gap-2 max-w-md">
+                                      <div class="text-14-semibold text-text-strong truncate">
+                                        {path()?.split("/").pop()}
+                                      </div>
+                                      <div class="text-14-regular text-text-weak">
+                                        {language.t("session.files.binaryContent")}
+                                      </div>
                                     </div>
                                   </div>
                                 </Match>
