@@ -73,6 +73,174 @@ export namespace File {
     })
   export type Content = z.infer<typeof Content>
 
+  const binaryExtensions = new Set([
+    "exe",
+    "dll",
+    "pdb",
+    "bin",
+    "so",
+    "dylib",
+    "o",
+    "a",
+    "lib",
+    "wav",
+    "mp3",
+    "ogg",
+    "oga",
+    "ogv",
+    "ogx",
+    "flac",
+    "aac",
+    "wma",
+    "m4a",
+    "weba",
+    "mp4",
+    "avi",
+    "mov",
+    "wmv",
+    "flv",
+    "webm",
+    "mkv",
+    "zip",
+    "tar",
+    "gz",
+    "gzip",
+    "bz",
+    "bz2",
+    "bzip",
+    "bzip2",
+    "7z",
+    "rar",
+    "xz",
+    "lz",
+    "z",
+    "pdf",
+    "doc",
+    "docx",
+    "ppt",
+    "pptx",
+    "xls",
+    "xlsx",
+    "dmg",
+    "iso",
+    "img",
+    "vmdk",
+    "ttf",
+    "otf",
+    "woff",
+    "woff2",
+    "eot",
+    "sqlite",
+    "db",
+    "mdb",
+    "apk",
+    "ipa",
+    "aab",
+    "xapk",
+    "app",
+    "pkg",
+    "deb",
+    "rpm",
+    "snap",
+    "flatpak",
+    "appimage",
+    "msi",
+    "msp",
+    "jar",
+    "war",
+    "ear",
+    "class",
+    "kotlin_module",
+    "dex",
+    "vdex",
+    "odex",
+    "oat",
+    "art",
+    "wasm",
+    "wat",
+    "bc",
+    "ll",
+    "s",
+    "ko",
+    "sys",
+    "drv",
+    "efi",
+    "rom",
+    "com",
+    "bat",
+    "cmd",
+    "ps1",
+    "sh",
+    "bash",
+    "zsh",
+    "fish",
+  ])
+
+  const imageExtensions = new Set([
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "bmp",
+    "webp",
+    "ico",
+    "tif",
+    "tiff",
+    "svg",
+    "svgz",
+    "avif",
+    "apng",
+    "jxl",
+    "heic",
+    "heif",
+    "raw",
+    "cr2",
+    "nef",
+    "arw",
+    "dng",
+    "orf",
+    "raf",
+    "pef",
+    "x3f",
+  ])
+
+  function isImageByExtension(filepath: string): boolean {
+    const ext = path.extname(filepath).toLowerCase().slice(1)
+    return imageExtensions.has(ext)
+  }
+
+  function getImageMimeType(filepath: string): string {
+    const ext = path.extname(filepath).toLowerCase().slice(1)
+    const mimeTypes: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      bmp: "image/bmp",
+      webp: "image/webp",
+      ico: "image/x-icon",
+      tif: "image/tiff",
+      tiff: "image/tiff",
+      svg: "image/svg+xml",
+      svgz: "image/svg+xml",
+      avif: "image/avif",
+      apng: "image/apng",
+      jxl: "image/jxl",
+      heic: "image/heic",
+      heif: "image/heif",
+    }
+    return mimeTypes[ext] || "image/" + ext
+  }
+
+  function isBinaryByExtension(filepath: string): boolean {
+    const ext = path.extname(filepath).toLowerCase().slice(1)
+    return binaryExtensions.has(ext)
+  }
+
+  function isImage(mimeType: string): boolean {
+    return mimeType.startsWith("image/")
+  }
+
   async function shouldEncode(file: BunFile): Promise<boolean> {
     const type = file.type?.toLowerCase()
     log.info("shouldEncode", { type })
@@ -83,35 +251,11 @@ export namespace File {
 
     const parts = type.split("/", 2)
     const top = parts[0]
-    const rest = parts[1] ?? ""
-    const sub = rest.split(";", 1)[0]
 
     const tops = ["image", "audio", "video", "font", "model", "multipart"]
     if (tops.includes(top)) return true
 
-    const bins = [
-      "zip",
-      "gzip",
-      "bzip",
-      "compressed",
-      "binary",
-      "pdf",
-      "msword",
-      "powerpoint",
-      "excel",
-      "ogg",
-      "exe",
-      "dmg",
-      "iso",
-      "rar",
-    ]
-    if (bins.some((mark) => sub.includes(mark))) return true
-
     return false
-  }
-
-  function isImage(mimeType: string): boolean {
-    return mimeType.startsWith("image/")
   }
 
   export const Event = {
@@ -280,64 +424,6 @@ export namespace File {
     }))
   }
 
-  const binaryExtensions = new Set([
-    "exe",
-    "dll",
-    "pdb",
-    "bin",
-    "so",
-    "dylib",
-    "o",
-    "a",
-    "lib",
-    "wav",
-    "mp3",
-    "ogg",
-    "flac",
-    "aac",
-    "wma",
-    "m4a",
-    "mp4",
-    "avi",
-    "mov",
-    "wmv",
-    "flv",
-    "webm",
-    "mkv",
-    "zip",
-    "tar",
-    "gz",
-    "bz2",
-    "7z",
-    "rar",
-    "xz",
-    "lz",
-    "pdf",
-    "doc",
-    "docx",
-    "ppt",
-    "pptx",
-    "xls",
-    "xlsx",
-    "dmg",
-    "iso",
-    "img",
-    "vmdk",
-    "ttf",
-    "otf",
-    "woff",
-    "woff2",
-    "eot",
-    "sqlite",
-    "db",
-    "mdb",
-  ])
-
-  function isBinaryByExtension(filepath: string): boolean {
-    const ext = path.extname(filepath).toLowerCase().slice(1)
-    return binaryExtensions.has(ext)
-  }
-
   export async function read(file: string): Promise<Content> {
     using _ = log.time("read", { file })
     const project = Instance.project
@@ -350,6 +436,17 @@ export namespace File {
     }
 
     // Fast path: check extension before any filesystem operations
+    if (isImageByExtension(file)) {
+      const bunFile = Bun.file(full)
+      if (await bunFile.exists()) {
+        const buffer = await bunFile.arrayBuffer().catch(() => new ArrayBuffer(0))
+        const content = Buffer.from(buffer).toString("base64")
+        const mimeType = getImageMimeType(file)
+        return { type: "text", content, mimeType, encoding: "base64" }
+      }
+      return { type: "text", content: "" }
+    }
+
     if (isBinaryByExtension(file)) {
       return { type: "binary", content: "" }
     }
