@@ -1236,6 +1236,21 @@ export default function Layout(props: ParentProps) {
     onCleanup(() => window.removeEventListener(deepLinkEvent, handler as EventListener))
   })
 
+  onMount(() => {
+    const event = "opencode:switch-project"
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ index: number }>).detail
+      const index = detail?.index
+      if (typeof index !== "number") return
+      const projects = layout.projects.list()
+      const project = projects[index]
+      if (!project) return
+      navigateToProject(project.worktree)
+    }
+    window.addEventListener(event, handler as EventListener)
+    onCleanup(() => window.removeEventListener(event, handler as EventListener))
+  })
+
   const displayName = (project: LocalProject) => project.name || getFilename(project.worktree)
 
   async function renameProject(project: LocalProject, next: string) {
