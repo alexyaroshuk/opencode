@@ -3,8 +3,6 @@ export const dict = {
   "desktop.menu.installCli": "تثبيت CLI...",
   "desktop.menu.reloadWebview": "إعادة تحميل Webview",
   "desktop.menu.restart": "إعادة تشغيل",
-  "desktop.menu.window": "نافذة",
-  "desktop.menu.window.project": "المشروع {{number}}",
 
   "desktop.dialog.chooseFolder": "اختر مجلدًا",
   "desktop.dialog.chooseFile": "اختر ملفًا",

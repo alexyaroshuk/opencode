@@ -27,6 +27,7 @@ export const dict = {
 
   "command.sidebar.toggle": "切换侧边栏",
   "command.project.open": "打开项目",
+  "command.project.switch": "切换到项目 {{number}}",
   "command.provider.connect": "连接提供商",
   "command.server.switch": "切换服务器",
   "command.settings.open": "打开设置",

@@ -27,6 +27,7 @@ export const dict = {
 
   "command.sidebar.toggle": "사이드바 토글",
   "command.project.open": "프로젝트 열기",
+  "command.project.switch": "프로젝트 {{number}} 전환",
   "command.provider.connect": "공급자 연결",
   "command.server.switch": "서버 전환",
   "command.settings.open": "설정 열기",

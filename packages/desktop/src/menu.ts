@@ -7,10 +7,6 @@ import { installCli } from "./cli"
 import { initI18n, t } from "./i18n"
 import { commands } from "./bindings"
 
-function switchProject(index: number) {
-  window.dispatchEvent(new CustomEvent("opencode:switch-project", { detail: { index } }))
-}
-
 export async function createMenu() {
   if (ostype() !== "macos") return
 
@@ -112,18 +108,6 @@ export async function createMenu() {
             item: "SelectAll",
           }),
         ],
-      }),
-      await Submenu.new({
-        text: t("desktop.menu.window"),
-        items: await Promise.all(
-          Array.from({ length: 9 }, (_, i) =>
-            MenuItem.new({
-              text: t("desktop.menu.window.project", { number: i + 1 }),
-              accelerator: `CmdOrCtrl+${i + 1}`,
-              action: () => switchProject(i),
-            }),
-          ),
-        ),
       }),
     ],
   })

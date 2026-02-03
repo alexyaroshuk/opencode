@@ -27,6 +27,7 @@ export const dict = {
 
   "command.sidebar.toggle": "Seitenleiste umschalten",
   "command.project.open": "Projekt öffnen",
+  "command.project.switch": "Zu Projekt {{number}} wechseln",
   "command.provider.connect": "Anbieter verbinden",
   "command.server.switch": "Server wechseln",
   "command.settings.open": "Einstellungen öffnen",

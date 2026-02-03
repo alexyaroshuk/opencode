@@ -1080,6 +1080,17 @@ export default function Layout(props: ParentProps) {
         keybind: "mod+o",
         onSelect: () => chooseProject(),
       },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        id: `project.switch.${i}`,
+        title: language.t("command.project.switch", { number: i + 1 }),
+        category: language.t("command.category.project"),
+        keybind: `mod+${i + 1}`,
+        onSelect: () => {
+          const projects = layout.projects.list()
+          const project = projects[i]
+          if (project) navigateToProject(project.worktree)
+        },
+      })),
       {
         id: "provider.connect",
         title: language.t("command.provider.connect"),
@@ -1300,21 +1311,6 @@ export default function Layout(props: ParentProps) {
     drainDeepLinks()
     window.addEventListener(deepLinkEvent, handler as EventListener)
     onCleanup(() => window.removeEventListener(deepLinkEvent, handler as EventListener))
-  })
-
-  onMount(() => {
-    const event = "opencode:switch-project"
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ index: number }>).detail
-      const index = detail?.index
-      if (typeof index !== "number") return
-      const projects = layout.projects.list()
-      const project = projects[index]
-      if (!project) return
-      navigateToProject(project.worktree)
-    }
-    window.addEventListener(event, handler as EventListener)
-    onCleanup(() => window.removeEventListener(event, handler as EventListener))
   })
 
   const displayName = (project: LocalProject) => project.name || getFilename(project.worktree)

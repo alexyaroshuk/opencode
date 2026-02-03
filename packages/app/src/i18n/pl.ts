@@ -23,6 +23,7 @@ export const dict = {
 
   "command.sidebar.toggle": "Przełącz pasek boczny",
   "command.project.open": "Otwórz projekt",
+  "command.project.switch": "Przełącz do projektu {{number}}",
   "command.provider.connect": "Połącz dostawcę",
   "command.server.switch": "Przełącz serwer",
   "command.settings.open": "Otwórz ustawienia",

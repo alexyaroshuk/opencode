@@ -23,6 +23,7 @@ export const dict = {
 
   "command.sidebar.toggle": "تبديل الشريط الجانبي",
   "command.project.open": "فتح مشروع",
+  "command.project.switch": "تبديل إلى المشروع {{number}}",
   "command.provider.connect": "اتصال بموفر",
   "command.server.switch": "تبديل الخادم",
   "command.settings.open": "فتح الإعدادات",

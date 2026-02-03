@@ -23,6 +23,7 @@ export const dict = {
 
   "command.sidebar.toggle": "サイドバーの切り替え",
   "command.project.open": "プロジェクトを開く",
+  "command.project.switch": "プロジェクト {{number}} に切り替え",
   "command.provider.connect": "プロバイダーに接続",
   "command.server.switch": "サーバーの切り替え",
   "command.settings.open": "設定を開く",
