@@ -2608,41 +2608,6 @@ export default function Page() {
                                   />
                                 )}
                               </For>
-                              <Show when={commenting()}>
-                                {(range) => (
-                                  <Show when={draftTop() !== undefined}>
-                                    <LineCommentEditor
-                                      top={draftTop()}
-                                      value={draft()}
-                                      selection={commentLabel(range())}
-                                      onInput={(value) => setDraft(value)}
-                                      onCancel={() => setCommenting(null)}
-                                      onSubmit={(value) => {
-                                        const p = path()
-                                        if (!p) return
-                                        addCommentToContext({
-                                          file: p,
-                                          selection: range(),
-                                          comment: value,
-                                          origin: "file",
-                                        })
-                                        setCommenting(null)
-                                      }}
-                                      onPopoverFocusOut={(e: FocusEvent) => {
-                                        const current = e.currentTarget as HTMLDivElement
-                                        const target = e.relatedTarget
-                                        if (target instanceof Node && current.contains(target)) return
-
-                                        setTimeout(() => {
-                                          if (!document.activeElement || !current.contains(document.activeElement)) {
-                                            setCommenting(null)
-                                          }
-                                        }, 0)
-                                      }}
-                                    />
-                                  </Show>
-                                )}
-                              </Show>
                             </div>
                           )
 
@@ -2831,6 +2796,39 @@ export default function Page() {
                                   </Match>
                                 </Switch>
                               </div>
+                              <Show when={commenting() && draftTop() !== undefined}>
+                                {(range) => (
+                                  <LineCommentEditor
+                                    top={draftTop()}
+                                    value={draft()}
+                                    selection={commentLabel(range())}
+                                    onInput={(value) => setDraft(value)}
+                                    onCancel={() => setCommenting(null)}
+                                    onSubmit={(value) => {
+                                      const p = path()
+                                      if (!p) return
+                                      addCommentToContext({
+                                        file: p,
+                                        selection: range(),
+                                        comment: value,
+                                        origin: "file",
+                                      })
+                                      setCommenting(null)
+                                    }}
+                                    onPopoverFocusOut={(e: FocusEvent) => {
+                                      const current = e.currentTarget as HTMLDivElement
+                                      const target = e.relatedTarget
+                                      if (target instanceof Node && current.contains(target)) return
+
+                                      setTimeout(() => {
+                                        if (!document.activeElement || !current.contains(document.activeElement)) {
+                                          setCommenting(null)
+                                        }
+                                      }, 0)
+                                    }}
+                                  />
+                                )}
+                              </Show>
                             </Tabs.Content>
                           )
                         }}

@@ -15,6 +15,7 @@ export type LineCommentAnchorProps = {
   onPopoverFocusOut?: JSX.EventHandlerUnion<HTMLDivElement, FocusEvent>
   class?: string
   popoverClass?: string
+  style?: JSX.CSSProperties
   children: JSX.Element
 }
 
@@ -35,6 +36,7 @@ export const LineCommentAnchor = (props: LineCommentAnchorProps) => {
         top: `${props.top ?? 0}px`,
         opacity: hidden() ? 0 : 1,
         "pointer-events": hidden() ? "none" : "auto",
+        ...props.style,
       }}
     >
       <button type="button" data-slot="line-comment-button" onClick={props.onClick} onMouseEnter={props.onMouseEnter}>
