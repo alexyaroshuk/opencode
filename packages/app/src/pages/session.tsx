@@ -2796,37 +2796,39 @@ export default function Page() {
                                   </Match>
                                 </Switch>
                               </div>
-                              <Show when={commenting() && draftTop() !== undefined}>
+                              <Show when={commenting()}>
                                 {(range) => (
-                                  <LineCommentEditor
-                                    top={draftTop()}
-                                    value={draft()}
-                                    selection={commentLabel(range())}
-                                    onInput={(value) => setDraft(value)}
-                                    onCancel={() => setCommenting(null)}
-                                    onSubmit={(value) => {
-                                      const p = path()
-                                      if (!p) return
-                                      addCommentToContext({
-                                        file: p,
-                                        selection: range(),
-                                        comment: value,
-                                        origin: "file",
-                                      })
-                                      setCommenting(null)
-                                    }}
-                                    onPopoverFocusOut={(e: FocusEvent) => {
-                                      const current = e.currentTarget as HTMLDivElement
-                                      const target = e.relatedTarget
-                                      if (target instanceof Node && current.contains(target)) return
+                                  <Show when={draftTop() !== undefined}>
+                                    <LineCommentEditor
+                                      top={draftTop()}
+                                      value={draft()}
+                                      selection={commentLabel(range())}
+                                      onInput={(value) => setDraft(value)}
+                                      onCancel={() => setCommenting(null)}
+                                      onSubmit={(value) => {
+                                        const p = path()
+                                        if (!p) return
+                                        addCommentToContext({
+                                          file: p,
+                                          selection: range(),
+                                          comment: value,
+                                          origin: "file",
+                                        })
+                                        setCommenting(null)
+                                      }}
+                                      onPopoverFocusOut={(e: FocusEvent) => {
+                                        const current = e.currentTarget as HTMLDivElement
+                                        const target = e.relatedTarget
+                                        if (target instanceof Node && current.contains(target)) return
 
-                                      setTimeout(() => {
-                                        if (!document.activeElement || !current.contains(document.activeElement)) {
-                                          setCommenting(null)
-                                        }
-                                      }, 0)
-                                    }}
-                                  />
+                                        setTimeout(() => {
+                                          if (!document.activeElement || !current.contains(document.activeElement)) {
+                                            setCommenting(null)
+                                          }
+                                        }, 0)
+                                      }}
+                                    />
+                                  </Show>
                                 )}
                               </Show>
                             </Tabs.Content>
