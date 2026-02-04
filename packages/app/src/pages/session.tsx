@@ -2473,16 +2473,16 @@ export default function Page() {
                             return node
                           }
 
-                          const markerTop = (scrollEl: HTMLElement, marker: HTMLElement) => {
-                            const scrollRect = scrollEl.getBoundingClientRect()
+                          const markerTop = (wrapper: HTMLElement, marker: HTMLElement) => {
+                            const wrapperRect = wrapper.getBoundingClientRect()
                             const rect = marker.getBoundingClientRect()
-                            return rect.top - scrollRect.top + scrollEl.scrollTop + Math.max(0, (rect.height - 20) / 2)
+                            return rect.top - wrapperRect.top + Math.max(0, (rect.height - 20) / 2)
                           }
 
                           const updateComments = () => {
-                            const scrollEl = scroll
+                            const el = wrap
                             const root = getRoot()
-                            if (!scrollEl || !root) {
+                            if (!el || !root) {
                               setPositions({})
                               setDraftTop(undefined)
                               return
@@ -2492,7 +2492,7 @@ export default function Page() {
                             for (const comment of fileComments()) {
                               const marker = findMarker(root, comment.selection)
                               if (!marker) continue
-                              next[comment.id] = markerTop(scrollEl, marker)
+                              next[comment.id] = markerTop(el, marker)
                             }
 
                             setPositions(next)
@@ -2509,7 +2509,7 @@ export default function Page() {
                               return
                             }
 
-                            setDraftTop(markerTop(scrollEl, marker))
+                            setDraftTop(markerTop(el, marker))
                           }
 
                           const scheduleComments = () => {
@@ -2544,14 +2544,13 @@ export default function Page() {
                             requestAnimationFrame(() => comments.clearFocus())
                           })
 
-                          const renderCode = (source: string, wrapperClass: string) => (
+                          const renderCode = (source: string, wrapperClass: string, fillHeight?: boolean) => (
                             <div
                               ref={(el) => {
                                 wrap = el
                                 scheduleComments()
                               }}
-                              class={`relative overflow-y-auto overflow-x-hidden ${wrapperClass}`}
-                              style={{ width: "max-content", "min-width": "100%" }}
+                              class={`relative overflow-hidden ${wrapperClass}`}
                             >
                               <Dynamic
                                 component={codeComponent}
@@ -2561,6 +2560,7 @@ export default function Page() {
                                   cacheKey: cacheKey(),
                                 }}
                                 enableLineSelection
+                                fillHeight={fillHeight}
                                 selectedLines={selectedLines()}
                                 commentedLines={commentedLines()}
                                 onRendered={() => {
@@ -2608,6 +2608,41 @@ export default function Page() {
                                   />
                                 )}
                               </For>
+                              <Show when={commenting()}>
+                                {(range) => (
+                                  <Show when={draftTop() !== undefined}>
+                                    <LineCommentEditor
+                                      top={draftTop()}
+                                      value={draft()}
+                                      selection={commentLabel(range())}
+                                      onInput={(value) => setDraft(value)}
+                                      onCancel={() => setCommenting(null)}
+                                      onSubmit={(value) => {
+                                        const p = path()
+                                        if (!p) return
+                                        addCommentToContext({
+                                          file: p,
+                                          selection: range(),
+                                          comment: value,
+                                          origin: "file",
+                                        })
+                                        setCommenting(null)
+                                      }}
+                                      onPopoverFocusOut={(e: FocusEvent) => {
+                                        const current = e.currentTarget as HTMLDivElement
+                                        const target = e.relatedTarget
+                                        if (target instanceof Node && current.contains(target)) return
+
+                                        setTimeout(() => {
+                                          if (!document.activeElement || !current.contains(document.activeElement)) {
+                                            setCommenting(null)
+                                          }
+                                        }, 0)
+                                      }}
+                                    />
+                                  </Show>
+                                )}
+                              </Show>
                             </div>
                           )
 
@@ -2642,16 +2677,14 @@ export default function Page() {
                           }
 
                           const handleCodeScroll = (event: Event) => {
-                            const el = scroll
-                            if (!el) return
-
                             const target = event.currentTarget
                             if (!(target instanceof HTMLElement)) return
 
                             queueScrollUpdate({
                               x: target.scrollLeft,
-                              y: el.scrollTop,
+                              y: target.scrollTop,
                             })
+                            scheduleComments()
                           }
 
                           const syncCodeScroll = () => {
@@ -2681,13 +2714,12 @@ export default function Page() {
                             if (codeScroll.length > 0) {
                               for (const item of codeScroll) {
                                 if (item.scrollLeft !== s.x) item.scrollLeft = s.x
+                                if (item.scrollTop !== s.y) item.scrollTop = s.y
                               }
+                              return
                             }
 
                             if (el.scrollTop !== s.y) el.scrollTop = s.y
-
-                            if (codeScroll.length > 0) return
-
                             if (el.scrollLeft !== s.x) el.scrollLeft = s.x
                           }
 
@@ -2696,7 +2728,7 @@ export default function Page() {
 
                             queueScrollUpdate({
                               x: codeScroll[0]?.scrollLeft ?? event.currentTarget.scrollLeft,
-                              y: event.currentTarget.scrollTop,
+                              y: codeScroll[0]?.scrollTop ?? event.currentTarget.scrollTop,
                             })
                           }
 
@@ -2752,85 +2784,48 @@ export default function Page() {
                               }}
                               onScroll={handleScroll}
                             >
-                              <div class="overflow-x-scroll overflow-y-auto h-full session-scroller">
-                                <Switch>
-                                  <Match when={state()?.loaded && isImage()}>
-                                    <div class="px-6 py-4 pb-40">
-                                      <img
-                                        src={imageDataUrl()}
-                                        alt={path()}
-                                        class="max-w-full"
-                                        onLoad={() => requestAnimationFrame(restoreScroll)}
-                                      />
-                                    </div>
-                                  </Match>
-                                  <Match when={state()?.loaded && isSvg()}>
-                                    <div class="flex flex-col gap-4 px-6 py-4">
-                                      {renderCode(svgContent() ?? "", "")}
-                                      <Show when={svgPreviewUrl()}>
-                                        <div class="flex justify-center pb-40">
-                                          <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
-                                        </div>
-                                      </Show>
-                                    </div>
-                                  </Match>
-                                  <Match when={state()?.loaded && isBinary()}>
-                                    <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
-                                      <Mark class="w-14 opacity-10" />
-                                      <div class="flex flex-col gap-2 max-w-md">
-                                        <div class="text-14-semibold text-text-strong truncate">
-                                          {path()?.split("/").pop()}
-                                        </div>
-                                        <div class="text-14-regular text-text-weak">
-                                          {language.t("session.files.binaryContent")}
-                                        </div>
+                              <Switch>
+                                <Match when={state()?.loaded && isImage()}>
+                                  <div class="px-6 py-4 pb-40">
+                                    <img
+                                      src={imageDataUrl()}
+                                      alt={path()}
+                                      class="max-w-full"
+                                      onLoad={() => requestAnimationFrame(restoreScroll)}
+                                    />
+                                  </div>
+                                </Match>
+                                <Match when={state()?.loaded && isSvg()}>
+                                  <div class="flex flex-col gap-4 px-6 py-4">
+                                    {renderCode(svgContent() ?? "", "")}
+                                    <Show when={svgPreviewUrl()}>
+                                      <div class="flex justify-center pb-40">
+                                        <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
+                                      </div>
+                                    </Show>
+                                  </div>
+                                </Match>
+                                <Match when={state()?.loaded && isBinary()}>
+                                  <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
+                                    <Mark class="w-14 opacity-10" />
+                                    <div class="flex flex-col gap-2 max-w-md">
+                                      <div class="text-14-semibold text-text-strong truncate">
+                                        {path()?.split("/").pop()}
+                                      </div>
+                                      <div class="text-14-regular text-text-weak">
+                                        {language.t("session.files.binaryContent")}
                                       </div>
                                     </div>
-                                  </Match>
-                                  <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
-                                  <Match when={state()?.loading}>
-                                    <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
-                                  </Match>
-                                  <Match when={state()?.error}>
-                                    {(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}
-                                  </Match>
-                                </Switch>
-                              </div>
-                              <Show when={commenting()}>
-                                {(range) => (
-                                  <Show when={draftTop() !== undefined}>
-                                    <LineCommentEditor
-                                      top={draftTop()}
-                                      value={draft()}
-                                      selection={commentLabel(range())}
-                                      onInput={(value) => setDraft(value)}
-                                      onCancel={() => setCommenting(null)}
-                                      onSubmit={(value) => {
-                                        const p = path()
-                                        if (!p) return
-                                        addCommentToContext({
-                                          file: p,
-                                          selection: range(),
-                                          comment: value,
-                                          origin: "file",
-                                        })
-                                        setCommenting(null)
-                                      }}
-                                      onPopoverFocusOut={(e: FocusEvent) => {
-                                        const current = e.currentTarget as HTMLDivElement
-                                        const target = e.relatedTarget
-                                        if (target instanceof Node && current.contains(target)) return
-
-                                        setTimeout(() => {
-                                          if (!document.activeElement || !current.contains(document.activeElement)) {
-                                            setCommenting(null)
-                                          }
-                                        }, 0)
-                                      }}
-                                    />
-                                  </Show>
-                                )}
-                              </Show>
+                                  </div>
+                                </Match>
+                                <Match when={state()?.loaded}>{renderCode(contents(), "h-full", true)}</Match>
+                                <Match when={state()?.loading}>
+                                  <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
+                                </Match>
+                                <Match when={state()?.error}>
+                                  {(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}
+                                </Match>
+                              </Switch>
                             </Tabs.Content>
                           )
                         }}

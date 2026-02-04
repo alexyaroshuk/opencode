@@ -135,6 +135,26 @@ const unsafeCSS = `
   }
   [data-code] {
     overflow-x: auto !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-weak-base) transparent;
+  }
+  [data-code]::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  [data-code]::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 5px;
+  }
+  [data-code]::-webkit-scrollbar-thumb {
+    background: var(--border-weak-base);
+    border-radius: 5px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  [data-code]::-webkit-scrollbar-thumb:hover {
+    background: var(--border-weak-base);
   }
 }`
 
