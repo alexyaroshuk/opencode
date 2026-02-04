@@ -2473,16 +2473,16 @@ export default function Page() {
                             return node
                           }
 
-                          const markerTop = (wrapper: HTMLElement, marker: HTMLElement) => {
-                            const wrapperRect = wrapper.getBoundingClientRect()
+                          const markerTop = (scrollEl: HTMLElement, marker: HTMLElement) => {
+                            const scrollRect = scrollEl.getBoundingClientRect()
                             const rect = marker.getBoundingClientRect()
-                            return rect.top - wrapperRect.top + Math.max(0, (rect.height - 20) / 2)
+                            return rect.top - scrollRect.top + scrollEl.scrollTop + Math.max(0, (rect.height - 20) / 2)
                           }
 
                           const updateComments = () => {
-                            const el = wrap
+                            const scrollEl = scroll
                             const root = getRoot()
-                            if (!el || !root) {
+                            if (!scrollEl || !root) {
                               setPositions({})
                               setDraftTop(undefined)
                               return
@@ -2492,7 +2492,7 @@ export default function Page() {
                             for (const comment of fileComments()) {
                               const marker = findMarker(root, comment.selection)
                               if (!marker) continue
-                              next[comment.id] = markerTop(el, marker)
+                              next[comment.id] = markerTop(scrollEl, marker)
                             }
 
                             setPositions(next)
@@ -2509,7 +2509,7 @@ export default function Page() {
                               return
                             }
 
-                            setDraftTop(markerTop(el, marker))
+                            setDraftTop(markerTop(scrollEl, marker))
                           }
 
                           const scheduleComments = () => {
