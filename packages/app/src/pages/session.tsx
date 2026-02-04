@@ -2550,7 +2550,8 @@ export default function Page() {
                                 wrap = el
                                 scheduleComments()
                               }}
-                              class={`relative overflow-hidden ${wrapperClass}`}
+                              class={`relative overflow-y-auto overflow-x-hidden ${wrapperClass}`}
+                              style={{ width: "max-content", "min-width": "100%" }}
                             >
                               <Dynamic
                                 component={codeComponent}
@@ -2786,48 +2787,50 @@ export default function Page() {
                               }}
                               onScroll={handleScroll}
                             >
-                              <Switch>
-                                <Match when={state()?.loaded && isImage()}>
-                                  <div class="px-6 py-4 pb-40">
-                                    <img
-                                      src={imageDataUrl()}
-                                      alt={path()}
-                                      class="max-w-full"
-                                      onLoad={() => requestAnimationFrame(restoreScroll)}
-                                    />
-                                  </div>
-                                </Match>
-                                <Match when={state()?.loaded && isSvg()}>
-                                  <div class="flex flex-col gap-4 px-6 py-4">
-                                    {renderCode(svgContent() ?? "", "")}
-                                    <Show when={svgPreviewUrl()}>
-                                      <div class="flex justify-center pb-40">
-                                        <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
-                                      </div>
-                                    </Show>
-                                  </div>
-                                </Match>
-                                <Match when={state()?.loaded && isBinary()}>
-                                  <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
-                                    <Mark class="w-14 opacity-10" />
-                                    <div class="flex flex-col gap-2 max-w-md">
-                                      <div class="text-14-semibold text-text-strong truncate">
-                                        {path()?.split("/").pop()}
-                                      </div>
-                                      <div class="text-14-regular text-text-weak">
-                                        {language.t("session.files.binaryContent")}
+                              <div class="overflow-x-scroll overflow-y-auto h-full session-scroller">
+                                <Switch>
+                                  <Match when={state()?.loaded && isImage()}>
+                                    <div class="px-6 py-4 pb-40">
+                                      <img
+                                        src={imageDataUrl()}
+                                        alt={path()}
+                                        class="max-w-full"
+                                        onLoad={() => requestAnimationFrame(restoreScroll)}
+                                      />
+                                    </div>
+                                  </Match>
+                                  <Match when={state()?.loaded && isSvg()}>
+                                    <div class="flex flex-col gap-4 px-6 py-4">
+                                      {renderCode(svgContent() ?? "", "")}
+                                      <Show when={svgPreviewUrl()}>
+                                        <div class="flex justify-center pb-40">
+                                          <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
+                                        </div>
+                                      </Show>
+                                    </div>
+                                  </Match>
+                                  <Match when={state()?.loaded && isBinary()}>
+                                    <div class="h-full px-6 pb-42 flex flex-col items-center justify-center text-center gap-6">
+                                      <Mark class="w-14 opacity-10" />
+                                      <div class="flex flex-col gap-2 max-w-md">
+                                        <div class="text-14-semibold text-text-strong truncate">
+                                          {path()?.split("/").pop()}
+                                        </div>
+                                        <div class="text-14-regular text-text-weak">
+                                          {language.t("session.files.binaryContent")}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                </Match>
-                                <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
-                                <Match when={state()?.loading}>
-                                  <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
-                                </Match>
-                                <Match when={state()?.error}>
-                                  {(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}
-                                </Match>
-                              </Switch>
+                                  </Match>
+                                  <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
+                                  <Match when={state()?.loading}>
+                                    <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
+                                  </Match>
+                                  <Match when={state()?.error}>
+                                    {(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}
+                                  </Match>
+                                </Switch>
+                              </div>
                             </Tabs.Content>
                           )
                         }}
