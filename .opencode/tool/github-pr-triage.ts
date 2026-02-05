@@ -28,29 +28,13 @@ export default tool({
   description: DESCRIPTION,
   args: {
     labels: tool.schema
-      .array(
-        tool.schema.enum([
-          "bug",
-          "enhancement",
-          "feature",
-          "docs",
-          "refactor",
-          "test",
-          "chore",
-          "small",
-          "medium",
-          "large",
-          "xl",
-          "needs-review",
-          "breaking-change",
-        ]),
-      )
+      .array(tool.schema.enum(["nix", "opentui", "perf", "desktop", "zen", "docs", "windows"]))
       .describe("The label(s) to add to the PR")
       .default([]),
   },
   async execute(args) {
     const pr = getPRNumber()
-    const owner = "anomalyco"
+    const owner = "alexyaroshuk"
     const repo = "opencode"
 
     const results: string[] = []

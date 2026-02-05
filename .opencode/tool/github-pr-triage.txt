@@ -2,27 +2,16 @@ Use this tool to add labels to a GitHub Pull Request.
 
 ## Labels
 
-### Type Labels
-- bug - Fix for a bug in the codebase
-- enhancement - Improvement or feature enhancement
-- feature - New feature or functionality
+### Platform Labels
+- nix - Any PR mentioning nix, nixos, or nix-related changes
+- opentui - Anything relating to the TUI itself
+- perf - Performance-related changes (slow, high ram, high cpu)
+- desktop - Related to `opencode web` command or desktop app
+- zen - Related to OpenCode Zen, billing, or model quality
 - docs - Documentation changes
-- refactor - Code refactoring without behavior changes
-- test - Adding or modifying tests
-- chore - Maintenance tasks, dependencies, build tools
-
-### Size Labels
-- small - Small change, minimal files (< 100 lines)
-- medium - Moderate change (100-500 lines)
-- large - Significant change (500-1000 lines)
-- xl - Very large change (> 1000 lines)
-
-### Status Labels
-- needs-review - PR requires review before merge
-- breaking-change - PR contains breaking changes
+- windows - Changes involving Windows OS compatibility
 
 ## Usage
 
-Always add appropriate labels to help reviewers understand the PR scope and type.
-For PRs with changed files > 50, add at least a size label.
-For PRs modifying core functionality, consider adding needs-review.
+Always add appropriate labels based on the PR content and files changed.
+For PRs with multiple areas, add all relevant labels.
