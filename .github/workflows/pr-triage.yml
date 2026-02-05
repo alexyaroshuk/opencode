@@ -23,6 +23,7 @@ jobs:
         run: curl -fsSL https://opencode.ai/install | bash
 
       - name: Triage PR
+        uses: ./.github/actions/setup-bun
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,10 +32,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
-          opencode run --agent pr-triage "The following PR was just opened or updated, triage it:
-
-          Title: $PR_TITLE
-
-          $PR_BODY
-
-          Changed files: $PR_FILES"
+          opencode run --agent github-pr-triage "Analyze this PR and add appropriate labels based on:
+          - The PR title: $PR_TITLE
+          - The PR body: $PR_BODY
+          - Changed files: $PR_FILES"
