@@ -15,7 +15,6 @@ export type CodeProps<T = {}> = FileOptions<T> & {
   onLineSelectionEnd?: (selection: SelectedLineRange | null) => void
   class?: string
   classList?: ComponentProps<"div">["classList"]
-  fillHeight?: boolean
 }
 
 function findElement(node: Node | null): HTMLElement | undefined {
@@ -149,7 +148,6 @@ export function Code<T>(props: CodeProps<T>) {
     "selectedLines",
     "commentedLines",
     "onRendered",
-    "fillHeight",
   ])
 
   const [rendered, setRendered] = createSignal(0)
@@ -194,40 +192,6 @@ export function Code<T>(props: CodeProps<T>) {
 
     host.removeAttribute("data-color-scheme")
   }
-
-  let fillHeightRO: ResizeObserver | undefined
-
-  const applyFillHeight = () => {
-    if (!local.fillHeight) return
-
-    const host = container.querySelector("diffs-container")
-    if (host instanceof HTMLElement) {
-      host.style.display = "block"
-    }
-
-    const root = getRoot()
-    if (!root) return
-
-    const height = wrapper.clientHeight
-    if (!height) return
-
-    for (const code of root.querySelectorAll("[data-code]")) {
-      if (!(code instanceof HTMLElement)) continue
-      code.style.height = `${height}px`
-      code.style.overflowX = "auto"
-      code.style.overflowY = "auto"
-    }
-
-    if (!fillHeightRO) {
-      fillHeightRO = new ResizeObserver(() => applyFillHeight())
-      fillHeightRO.observe(wrapper)
-    }
-  }
-
-  onCleanup(() => {
-    fillHeightRO?.disconnect()
-    fillHeightRO = undefined
-  })
 
   const supportsHighlights = () => {
     const g = globalThis as unknown as { CSS?: { highlights?: unknown }; Highlight?: unknown }
@@ -649,7 +613,6 @@ export function Code<T>(props: CodeProps<T>) {
       observer = undefined
       requestAnimationFrame(() => {
         if (token !== renderToken) return
-        applyFillHeight()
         applySelection(lastSelection)
         applyFind({ reset: true })
         local.onRendered?.()
@@ -883,7 +846,6 @@ export function Code<T>(props: CodeProps<T>) {
     })
 
     applyScheme()
-    applyFillHeight()
 
     setRendered((value) => value + 1)
     notifyRendered()
@@ -957,7 +919,7 @@ export function Code<T>(props: CodeProps<T>) {
   return (
     <div
       data-component="code"
-      style={{ ...styleVariables, ...(local.fillHeight ? { height: "100%" } : {}) }}
+      style={styleVariables}
       class="relative outline-none"
       classList={{
         ...(local.classList || {}),
