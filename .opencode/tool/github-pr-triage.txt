@@ -1,0 +1,28 @@
+Use this tool to add labels to a GitHub Pull Request.
+
+## Labels
+
+### Type Labels
+- bug - Fix for a bug in the codebase
+- enhancement - Improvement or feature enhancement
+- feature - New feature or functionality
+- docs - Documentation changes
+- refactor - Code refactoring without behavior changes
+- test - Adding or modifying tests
+- chore - Maintenance tasks, dependencies, build tools
+
+### Size Labels
+- small - Small change, minimal files (< 100 lines)
+- medium - Moderate change (100-500 lines)
+- large - Significant change (500-1000 lines)
+- xl - Very large change (> 1000 lines)
+
+### Status Labels
+- needs-review - PR requires review before merge
+- breaking-change - PR contains breaking changes
+
+## Usage
+
+Always add appropriate labels to help reviewers understand the PR scope and type.
+For PRs with changed files > 50, add at least a size label.
+For PRs modifying core functionality, consider adding needs-review.
