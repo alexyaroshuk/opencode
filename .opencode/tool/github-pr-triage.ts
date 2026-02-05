@@ -19,9 +19,24 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
     },
   })
   if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status} ${response.statusText}`)
+    const error = await response.text()
+    return { error, ok: false }
   }
   return response.json()
+}
+
+async function ensureLabelExists(owner: string, repo: string, label: string) {
+  const response = await githubFetch(`/repos/${owner}/${repo}/labels/${label}`)
+  if (!response.error) return
+
+  await githubFetch(`/repos/${owner}/${repo}/labels`, {
+    method: "POST",
+    body: JSON.stringify({
+      name: label,
+      color: "ededed",
+      description: label.charAt(0).toUpperCase() + label.slice(1),
+    }),
+  })
 }
 
 export default tool({
@@ -42,6 +57,9 @@ export default tool({
     const labels: string[] = args.labels
 
     if (labels.length > 0) {
+      for (const label of labels) {
+        await ensureLabelExists(owner, repo, label)
+      }
       await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
         method: "POST",
         body: JSON.stringify({ labels }),
