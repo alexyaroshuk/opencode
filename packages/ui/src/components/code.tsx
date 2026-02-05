@@ -6,15 +6,24 @@ import { Icon } from "./icon"
 
 type SelectionSide = "additions" | "deletions"
 
+export type CommentAnchor = {
+  id: string
+  line: number
+}
+
 export type CodeProps<T = {}> = FileOptions<T> & {
   file: FileContents
   annotations?: LineAnnotation<T>[]
   selectedLines?: SelectedLineRange | null
   commentedLines?: SelectedLineRange[]
+  commentAnchors?: CommentAnchor[]
   onRendered?: () => void
   onLineSelectionEnd?: (selection: SelectedLineRange | null) => void
+  onCommentAnchorClick?: (id: string) => void
+  onCommentAnchorHover?: (id: string | null) => void
   class?: string
   classList?: ComponentProps<"div">["classList"]
+  fillHeight?: boolean
 }
 
 function findElement(node: Node | null): HTMLElement | undefined {
@@ -147,7 +156,11 @@ export function Code<T>(props: CodeProps<T>) {
     "annotations",
     "selectedLines",
     "commentedLines",
+    "commentAnchors",
     "onRendered",
+    "onCommentAnchorClick",
+    "onCommentAnchorHover",
+    "fillHeight",
   ])
 
   const [rendered, setRendered] = createSignal(0)
@@ -192,6 +205,40 @@ export function Code<T>(props: CodeProps<T>) {
 
     host.removeAttribute("data-color-scheme")
   }
+
+  let fillHeightRO: ResizeObserver | undefined
+
+  const applyFillHeight = () => {
+    if (!local.fillHeight) return
+
+    const host = container.querySelector("diffs-container")
+    if (host instanceof HTMLElement) {
+      host.style.display = "block"
+    }
+
+    const root = getRoot()
+    if (!root) return
+
+    const height = wrapper.clientHeight
+    if (!height) return
+
+    for (const code of root.querySelectorAll("[data-code]")) {
+      if (!(code instanceof HTMLElement)) continue
+      code.style.height = `${height}px`
+      code.style.overflowX = "auto"
+      code.style.overflowY = "auto"
+    }
+
+    if (!fillHeightRO) {
+      fillHeightRO = new ResizeObserver(() => applyFillHeight())
+      fillHeightRO.observe(wrapper)
+    }
+  }
+
+  onCleanup(() => {
+    fillHeightRO?.disconnect()
+    fillHeightRO = undefined
+  })
 
   const supportsHighlights = () => {
     const g = globalThis as unknown as { CSS?: { highlights?: unknown }; Highlight?: unknown }
@@ -553,6 +600,47 @@ export function Code<T>(props: CodeProps<T>) {
     }
   }
 
+  const applyCommentAnchors = (anchors: CommentAnchor[]) => {
+    const root = getRoot()
+    if (!root) return
+
+    // Remove existing anchors
+    const existing = Array.from(root.querySelectorAll("[data-comment-anchor]"))
+    for (const node of existing) {
+      node.remove()
+    }
+
+    // Create anchors for each comment
+    for (const anchor of anchors) {
+      const lineEl = root.querySelector(`[data-line="${anchor.line}"]`)
+      if (!(lineEl instanceof HTMLElement)) continue
+
+      // Find the line number column within this line
+      const numberCol = lineEl.querySelector("[data-column-number]")
+      if (!(numberCol instanceof HTMLElement)) continue
+
+      const btn = document.createElement("button")
+      btn.setAttribute("data-comment-anchor", anchor.id)
+      btn.setAttribute("type", "button")
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5.5L3 13.5V11H3a1 1 0 0 1-1-1V3Z"/></svg>`
+
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        local.onCommentAnchorClick?.(anchor.id)
+      })
+
+      btn.addEventListener("mouseenter", () => {
+        local.onCommentAnchorHover?.(anchor.id)
+      })
+
+      btn.addEventListener("mouseleave", () => {
+        local.onCommentAnchorHover?.(null)
+      })
+
+      numberCol.appendChild(btn)
+    }
+  }
+
   const lineCount = () => {
     const text = local.file.contents
     const total = text.split("\n").length - (text.endsWith("\n") ? 1 : 0)
@@ -613,6 +701,7 @@ export function Code<T>(props: CodeProps<T>) {
       observer = undefined
       requestAnimationFrame(() => {
         if (token !== renderToken) return
+        applyFillHeight()
         applySelection(lastSelection)
         applyFind({ reset: true })
         local.onRendered?.()
@@ -846,6 +935,7 @@ export function Code<T>(props: CodeProps<T>) {
     })
 
     applyScheme()
+    applyFillHeight()
 
     setRendered((value) => value + 1)
     notifyRendered()
@@ -867,6 +957,12 @@ export function Code<T>(props: CodeProps<T>) {
     rendered()
     const ranges = local.commentedLines ?? []
     requestAnimationFrame(() => applyCommentedLines(ranges))
+  })
+
+  createEffect(() => {
+    rendered()
+    const anchors = local.commentAnchors ?? []
+    requestAnimationFrame(() => applyCommentAnchors(anchors))
   })
 
   createEffect(() => {
@@ -919,7 +1015,7 @@ export function Code<T>(props: CodeProps<T>) {
   return (
     <div
       data-component="code"
-      style={styleVariables}
+      style={{ ...styleVariables, ...(local.fillHeight ? { height: "100%" } : {}) }}
       class="relative outline-none"
       classList={{
         ...(local.classList || {}),

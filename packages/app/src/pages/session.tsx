@@ -26,7 +26,7 @@ import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Tabs } from "@opencode-ai/ui/tabs"
 import { useCodeComponent } from "@opencode-ai/ui/context/code"
-import { LineComment as LineCommentView, LineCommentEditor } from "@opencode-ai/ui/line-comment"
+import { LineCommentEditor } from "@opencode-ai/ui/line-comment"
 import { SessionTurn } from "@opencode-ai/ui/session-turn"
 import { BasicTool } from "@opencode-ai/ui/basic-tool"
 import { createAutoScroll } from "@opencode-ai/ui/hooks"
@@ -2333,9 +2333,6 @@ export default function Page() {
                           let scrollFrame: number | undefined
                           let pending: { x: number; y: number } | undefined
                           let codeScroll: HTMLElement[] = []
-                          let hScrollbar: HTMLDivElement | undefined
-                          let hScrollContent: HTMLDivElement | undefined
-                          let syncingHScroll = false
 
                           const path = createMemo(() => file.pathFromTab(tab))
                           const state = createMemo(() => {
@@ -2414,11 +2411,17 @@ export default function Page() {
 
                           const commentedLines = createMemo(() => fileComments().map((comment) => comment.selection))
 
+                          const commentAnchors = createMemo(() =>
+                            fileComments().map((comment) => ({
+                              id: comment.id,
+                              line: Math.max(comment.selection.start, comment.selection.end),
+                            })),
+                          )
+
                           const [note, setNote] = createStore({
                             openedComment: null as string | null,
                             commenting: null as SelectedLineRange | null,
                             draft: "",
-                            positions: {} as Record<string, number>,
                             draftTop: undefined as number | undefined,
                           })
 
@@ -2438,11 +2441,6 @@ export default function Page() {
                           const setDraft = (
                             value: typeof note.draft | ((value: typeof note.draft) => typeof note.draft),
                           ) => setNote("draft", value)
-
-                          const positions = () => note.positions
-                          const setPositions = (
-                            value: typeof note.positions | ((value: typeof note.positions) => typeof note.positions),
-                          ) => setNote("positions", value)
 
                           const draftTop = () => note.draftTop
                           const setDraftTop = (
@@ -2476,32 +2474,21 @@ export default function Page() {
                             return node
                           }
 
-                          const markerTop = (wrapper: HTMLElement, marker: HTMLElement) => {
-                            const wrapperRect = wrapper.getBoundingClientRect()
-                            const rect = marker.getBoundingClientRect()
-                            return rect.top - wrapperRect.top + Math.max(0, (rect.height - 20) / 2)
-                          }
-
-                          const updateComments = () => {
-                            const el = wrap
-                            const root = getRoot()
-                            if (!el || !root) {
-                              setPositions({})
+                          const updateDraftPosition = () => {
+                            const range = commenting()
+                            if (!range) {
                               setDraftTop(undefined)
                               return
                             }
 
-                            const next: Record<string, number> = {}
-                            for (const comment of fileComments()) {
-                              const marker = findMarker(root, comment.selection)
-                              if (!marker) continue
-                              next[comment.id] = markerTop(el, marker)
+                            const el = wrap
+                            if (!el) {
+                              setDraftTop(undefined)
+                              return
                             }
 
-                            setPositions(next)
-
-                            const range = commenting()
-                            if (!range) {
+                            const root = getRoot()
+                            if (!root) {
                               setDraftTop(undefined)
                               return
                             }
@@ -2512,21 +2499,19 @@ export default function Page() {
                               return
                             }
 
-                            setDraftTop(markerTop(el, marker))
+                            // Position relative to wrapper (viewport), not content
+                            const wrapperRect = el.getBoundingClientRect()
+                            const rect = marker.getBoundingClientRect()
+                            setDraftTop(rect.top - wrapperRect.top + Math.max(0, (rect.height - 20) / 2))
                           }
 
-                          const scheduleComments = () => {
-                            requestAnimationFrame(updateComments)
+                          const scheduleDraftPosition = () => {
+                            requestAnimationFrame(updateDraftPosition)
                           }
-
-                          createEffect(() => {
-                            fileComments()
-                            scheduleComments()
-                          })
 
                           createEffect(() => {
                             const range = commenting()
-                            scheduleComments()
+                            scheduleDraftPosition()
                             if (!range) return
                             setDraft("")
                           })
@@ -2547,11 +2532,10 @@ export default function Page() {
                             requestAnimationFrame(() => comments.clearFocus())
                           })
 
-                          const renderCode = (source: string, wrapperClass: string) => (
+                          const renderCode = (source: string, wrapperClass: string, fillHeight?: boolean) => (
                             <div
                               ref={(el) => {
                                 wrap = el
-                                scheduleComments()
                               }}
                               class={`relative overflow-hidden ${wrapperClass}`}
                             >
@@ -2563,15 +2547,13 @@ export default function Page() {
                                   cacheKey: cacheKey(),
                                 }}
                                 enableLineSelection
+                                fillHeight={fillHeight}
                                 selectedLines={selectedLines()}
                                 commentedLines={commentedLines()}
+                                commentAnchors={commentAnchors()}
                                 onRendered={() => {
-                                  requestAnimationFrame(() => {
-                                    syncCodeScroll()
-                                    restoreScroll()
-                                    updateHScrollbarWidth()
-                                  })
-                                  requestAnimationFrame(scheduleComments)
+                                  requestAnimationFrame(restoreScroll)
+                                  requestAnimationFrame(scheduleDraftPosition)
                                 }}
                                 onLineSelected={(range: SelectedLineRange | null) => {
                                   const p = path()
@@ -2588,32 +2570,26 @@ export default function Page() {
                                   setOpenedComment(null)
                                   setCommenting(range)
                                 }}
+                                onCommentAnchorClick={(id: string) => {
+                                  const p = path()
+                                  if (!p) return
+                                  const comment = fileComments().find((c) => c.id === id)
+                                  if (!comment) return
+                                  setCommenting(null)
+                                  setOpenedComment((current) => (current === id ? null : id))
+                                  file.setSelectedLines(p, comment.selection)
+                                }}
+                                onCommentAnchorHover={(id: string | null) => {
+                                  const p = path()
+                                  if (!p) return
+                                  if (id) {
+                                    const comment = fileComments().find((c) => c.id === id)
+                                    if (comment) file.setSelectedLines(p, comment.selection)
+                                  }
+                                }}
                                 overflow="scroll"
                                 class="select-text"
                               />
-                              <For each={fileComments()}>
-                                {(comment) => (
-                                  <LineCommentView
-                                    id={comment.id}
-                                    top={positions()[comment.id]}
-                                    open={openedComment() === comment.id}
-                                    comment={comment.comment}
-                                    selection={commentLabel(comment.selection)}
-                                    onMouseEnter={() => {
-                                      const p = path()
-                                      if (!p) return
-                                      file.setSelectedLines(p, comment.selection)
-                                    }}
-                                    onClick={() => {
-                                      const p = path()
-                                      if (!p) return
-                                      setCommenting(null)
-                                      setOpenedComment((current) => (current === comment.id ? null : comment.id))
-                                      file.setSelectedLines(p, comment.selection)
-                                    }}
-                                  />
-                                )}
-                              </For>
                               <Show when={commenting()}>
                                 {(range) => (
                                   <Show when={draftTop() !== undefined}>
@@ -2688,14 +2664,8 @@ export default function Page() {
 
                             queueScrollUpdate({
                               x: target.scrollLeft,
-                              y: scroll?.scrollTop ?? 0,
+                              y: target.scrollTop,
                             })
-
-                            if (!syncingHScroll && hScrollbar) {
-                              syncingHScroll = true
-                              hScrollbar.scrollLeft = target.scrollLeft
-                              syncingHScroll = false
-                            }
                           }
 
                           const syncCodeScroll = () => {
@@ -2717,24 +2687,20 @@ export default function Page() {
                             const el = scroll
                             if (!el) return
 
+                            syncCodeScroll()
+
                             const s = view()?.scroll(tab)
                             if (!s) return
-
-                            syncCodeScroll()
 
                             if (codeScroll.length > 0) {
                               for (const item of codeScroll) {
                                 if (item.scrollLeft !== s.x) item.scrollLeft = s.x
+                                if (item.scrollTop !== s.y) item.scrollTop = s.y
                               }
-                              if (hScrollbar && hScrollbar.scrollLeft !== s.x) {
-                                hScrollbar.scrollLeft = s.x
-                              }
+                              return
                             }
 
                             if (el.scrollTop !== s.y) el.scrollTop = s.y
-
-                            if (codeScroll.length > 0) return
-
                             if (el.scrollLeft !== s.x) el.scrollLeft = s.x
                           }
 
@@ -2743,40 +2709,8 @@ export default function Page() {
 
                             queueScrollUpdate({
                               x: codeScroll[0]?.scrollLeft ?? event.currentTarget.scrollLeft,
-                              y: event.currentTarget.scrollTop,
+                              y: codeScroll[0]?.scrollTop ?? event.currentTarget.scrollTop,
                             })
-                          }
-
-                          const updateHScrollbarWidth = () => {
-                            if (!hScrollContent) return
-                            const code = codeScroll[0]
-                            if (!code) {
-                              hScrollContent.style.width = "0"
-                              return
-                            }
-                            hScrollContent.style.width = `${code.scrollWidth}px`
-                          }
-
-                          const handleHScrollbarScroll = () => {
-                            if (syncingHScroll || !hScrollbar) return
-                            syncingHScroll = true
-                            for (const item of codeScroll) {
-                              item.scrollLeft = hScrollbar.scrollLeft
-                            }
-                            queueScrollUpdate({
-                              x: hScrollbar.scrollLeft,
-                              y: scroll?.scrollTop ?? 0,
-                            })
-                            syncingHScroll = false
-                          }
-
-                          const syncHScrollbarFromCode = () => {
-                            if (syncingHScroll || !hScrollbar) return
-                            const code = codeScroll[0]
-                            if (!code) return
-                            syncingHScroll = true
-                            hScrollbar.scrollLeft = code.scrollLeft
-                            syncingHScroll = false
                           }
 
                           createEffect(
@@ -2824,7 +2758,7 @@ export default function Page() {
                           return (
                             <Tabs.Content
                               value={tab}
-                              class="mt-3 relative session-scroller"
+                              class="mt-3 relative"
                               ref={(el: HTMLDivElement) => {
                                 scroll = el
                                 restoreScroll()
@@ -2865,7 +2799,7 @@ export default function Page() {
                                     </div>
                                   </div>
                                 </Match>
-                                <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
+                                <Match when={state()?.loaded}>{renderCode(contents(), "h-full", true)}</Match>
                                 <Match when={state()?.loading}>
                                   <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
                                 </Match>
@@ -2873,16 +2807,6 @@ export default function Page() {
                                   {(err) => <div class="px-6 py-4 text-text-weak">{err()}</div>}
                                 </Match>
                               </Switch>
-                              <Show when={state()?.loaded && !isImage() && !isSvg() && !isBinary()}>
-                                <div
-                                  ref={(el) => (hScrollbar = el)}
-                                  onScroll={handleHScrollbarScroll}
-                                  class="session-scroller sticky bottom-0 z-10 overflow-x-auto overflow-y-hidden bg-background-base"
-                                  style={{ height: "12px" }}
-                                >
-                                  <div ref={(el) => (hScrollContent = el)} style={{ height: "1px" }} />
-                                </div>
-                              </Show>
                             </Tabs.Content>
                           )
                         }}
