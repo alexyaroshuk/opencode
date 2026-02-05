@@ -2550,7 +2550,7 @@ export default function Page() {
                               ref={(el) => {
                                 wrap = el
                               }}
-                              class={`relative overflow-hidden ${wrapperClass}`}
+                              class={`relative ${wrapperClass}`}
                             >
                               <Dynamic
                                 component={codeComponent}

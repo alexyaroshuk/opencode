@@ -207,6 +207,7 @@ export function Code<T>(props: CodeProps<T>) {
   }
 
   let fillHeightRO: ResizeObserver | undefined
+  let fillHeightMO: MutationObserver | undefined
 
   const applyFillHeight = () => {
     if (!local.fillHeight) return
@@ -233,11 +234,19 @@ export function Code<T>(props: CodeProps<T>) {
       fillHeightRO = new ResizeObserver(() => applyFillHeight())
       fillHeightRO.observe(wrapper)
     }
+
+    // Watch for DOM changes (e.g. syntax highlighting) that may recreate [data-code] elements
+    if (!fillHeightMO) {
+      fillHeightMO = new MutationObserver(() => applyFillHeight())
+      fillHeightMO.observe(root, { childList: true, subtree: true })
+    }
   }
 
   onCleanup(() => {
     fillHeightRO?.disconnect()
     fillHeightRO = undefined
+    fillHeightMO?.disconnect()
+    fillHeightMO = undefined
   })
 
   const supportsHighlights = () => {
