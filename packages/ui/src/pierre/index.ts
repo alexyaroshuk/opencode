@@ -134,6 +134,12 @@ const unsafeCSS = `
     cursor: auto !important;
   }
   [data-code] {
+    grid-auto-rows: min-content !important;
+  }
+  [data-code] [data-line] {
+    height: var(--diffs-line-height);
+  }
+  [data-code] {
     overflow-x: auto !important;
 
     scrollbar-width: thin;
