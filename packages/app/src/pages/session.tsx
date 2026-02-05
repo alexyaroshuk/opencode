@@ -2474,6 +2474,8 @@ export default function Page() {
                             return node
                           }
 
+                          let draftPositionFrame: number | undefined
+
                           const updateDraftPosition = () => {
                             const range = commenting()
                             if (!range) {
@@ -2506,8 +2508,19 @@ export default function Page() {
                           }
 
                           const scheduleDraftPosition = () => {
-                            requestAnimationFrame(updateDraftPosition)
+                            if (draftPositionFrame !== undefined) return
+                            draftPositionFrame = requestAnimationFrame(() => {
+                              draftPositionFrame = undefined
+                              updateDraftPosition()
+                            })
                           }
+
+                          onCleanup(() => {
+                            if (draftPositionFrame !== undefined) {
+                              cancelAnimationFrame(draftPositionFrame)
+                              draftPositionFrame = undefined
+                            }
+                          })
 
                           createEffect(() => {
                             const range = commenting()
@@ -2666,6 +2679,8 @@ export default function Page() {
                               x: target.scrollLeft,
                               y: target.scrollTop,
                             })
+
+                            scheduleDraftPosition()
                           }
 
                           const syncCodeScroll = () => {
