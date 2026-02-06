@@ -973,6 +973,63 @@ export default function Page() {
     })
   }
 
+  const mentionTabInPrompt = (tab: string) => {
+    const path = file.pathFromTab(tab)
+    if (!path) return
+    const content = "@" + path
+    const current = prompt.current()
+    const textLength = current.reduce((len, part) => len + ("content" in part ? part.content.length : 0), 0)
+
+    const needsSpace =
+      textLength > 0 &&
+      !current.some((part) => {
+        if (part.type !== "text") return false
+        return part.content.endsWith(" ") || part.content.endsWith("\n")
+      })
+
+    const parts = [...current]
+    let position = textLength
+
+    if (needsSpace) {
+      const lastTextIndex = parts.findLastIndex((p) => p.type === "text")
+      if (lastTextIndex >= 0) {
+        const lastText = parts[lastTextIndex]
+        if (lastText.type === "text") {
+          parts[lastTextIndex] = {
+            ...lastText,
+            content: lastText.content + " ",
+            end: lastText.end + 1,
+          }
+          position += 1
+        }
+      } else {
+        parts.push({ type: "text", content: " ", start: position, end: position + 1 })
+        position += 1
+      }
+    }
+
+    parts.push({
+      type: "file",
+      path,
+      content,
+      start: position,
+      end: position + content.length,
+    })
+    position += content.length
+
+    parts.push({ type: "text", content: " ", start: position, end: position + 1 })
+    position += 1
+
+    prompt.set(parts, position)
+  }
+
+  const closeOtherTabs = (currentTab: string) => {
+    const others = openedTabs().filter((tab) => tab !== currentTab)
+    for (const tab of others) {
+      tabs().close(tab)
+    }
+  }
+
   command.register(() => [
     {
       id: "session.new",
@@ -2924,7 +2981,15 @@ export default function Page() {
                           </Show>
                           <SortableProvider ids={openedTabs()}>
                             <For each={openedTabs()}>
-                              {(tab) => <SortableTab tab={tab} onTabClose={tabs().close} />}
+                              {(tab) => (
+                                <SortableTab
+                                  tab={tab}
+                                  onTabClose={tabs().close}
+                                  onMention={mentionTabInPrompt}
+                                  onCloseOthers={closeOtherTabs}
+                                  onClick={() => openTab(tab)}
+                                />
+                              )}
                             </For>
                           </SortableProvider>
                           <StickyAddButton>
