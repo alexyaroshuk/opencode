@@ -644,6 +644,53 @@ export default function Page() {
     prompt.context.add({ type: "file", path, selection, preview })
   }
 
+  const mentionFileInPrompt = (path: string, isDirectory = false) => {
+    const current = prompt.current()
+    const mentionPath = isDirectory && !path.endsWith("/") ? path + "/" : path
+    const content = "@" + mentionPath
+    const textLength = current.reduce((len, part) => len + ("content" in part ? part.content.length : 0), 0)
+
+    const needsSpace = textLength > 0 && !current.some((part) => {
+      if (part.type !== "text") return false
+      return part.content.endsWith(" ") || part.content.endsWith("\n")
+    })
+
+    const parts = [...current]
+    let position = textLength
+
+    if (needsSpace) {
+      const lastTextIndex = parts.findLastIndex((p) => p.type === "text")
+      if (lastTextIndex >= 0) {
+        const lastText = parts[lastTextIndex]
+        if (lastText.type === "text") {
+          parts[lastTextIndex] = {
+            ...lastText,
+            content: lastText.content + " ",
+            end: lastText.end + 1,
+          }
+          position += 1
+        }
+      } else {
+        parts.push({ type: "text", content: " ", start: position, end: position + 1 })
+        position += 1
+      }
+    }
+
+    parts.push({
+      type: "file",
+      path: mentionPath,
+      content,
+      start: position,
+      end: position + content.length,
+    })
+    position += content.length
+
+    parts.push({ type: "text", content: " ", start: position, end: position + 1 })
+    position += 1
+
+    prompt.set(parts, position)
+  }
+
   const addCommentToContext = (input: {
     file: string
     selection: SelectedLineRange
@@ -2894,6 +2941,7 @@ export default function Page() {
                               draggable={false}
                               active={activeDiff()}
                               onFileClick={(node) => focusReviewDiff(node.path)}
+                              onMention={(node) => mentionFileInPrompt(node.path, node.type === "directory")}
                             />
                           </Show>
                         </Match>
@@ -2910,6 +2958,7 @@ export default function Page() {
                         modified={diffFiles()}
                         kinds={kinds()}
                         onFileClick={(node) => openTab(file.tab(node.path))}
+                        onMention={(node) => mentionFileInPrompt(node.path, node.type === "directory")}
                       />
                     </Tabs.Content>
                   </Tabs>
