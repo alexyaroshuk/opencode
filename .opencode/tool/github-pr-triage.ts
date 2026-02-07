@@ -42,9 +42,9 @@ async function ensureLabelExists(owner: string, repo: string, label: string) {
 export default tool({
   description: DESCRIPTION,
   args: {
-    command: tool.schema.string().describe("The command to execute").default("add-label"),
-    label: tool.schema.string().describe("The label to add").optional(),
-    labels: tool.schema.array(tool.schema.string()).describe("The labels to add").optional(),
+    command: tool.schema.string().describe("Command to execute").optional(),
+    label: tool.schema.string().describe("Single label to add").optional(),
+    labels: tool.schema.array(tool.schema.string()).describe("Labels to add").optional(),
   },
   async execute(args) {
     const pr = getPRNumber()
@@ -59,6 +59,8 @@ export default tool({
       labels = [args.label]
     } else if (args.labels) {
       labels = args.labels
+    } else {
+      labels = ["zen"]
     }
 
     if (labels.length > 0) {
