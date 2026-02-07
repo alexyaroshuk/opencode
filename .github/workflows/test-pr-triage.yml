@@ -1,11 +1,15 @@
-name: pr-triage
+name: test-pr-triage
 
 on:
-  pull_request_target:
-    types: [opened, edited, synchronize]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to triage"
+        required: true
+        type: number
 
 jobs:
-  triage-pr:
+  test-triage:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,12 +31,6 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_FILES: ${{ github.event.pull_request.changed_files }}
+          ISSUE_NUMBER: ${{ github.event.inputs.pr_number }}
         run: |
-          opencode run --agent pr-triage "Analyze this PR and add appropriate labels based on:
-          - The PR title: $PR_TITLE
-          - The PR body: $PR_BODY
-          - Changed files: $PR_FILES"
+          opencode run --agent pr-triage "Test: Add 'docs' label to PR #$ISSUE_NUMBER"
