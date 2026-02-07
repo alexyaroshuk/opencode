@@ -23,7 +23,6 @@ jobs:
         run: curl -fsSL https://opencode.ai/install | bash
 
       - name: Triage PR
-        uses: ./.github/actions/setup-bun
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
