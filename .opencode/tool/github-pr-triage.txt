@@ -1,0 +1,17 @@
+Use this tool to add labels to a GitHub Pull Request.
+
+## Labels
+
+### Platform Labels
+- nix - Any PR mentioning nix, nixos, or nix-related changes
+- opentui - Anything relating to the TUI itself
+- perf - Performance-related changes (slow, high ram, high cpu)
+- desktop - Related to `opencode web` command or desktop app
+- zen - Related to OpenCode Zen, billing, or model quality
+- docs - Documentation changes
+- windows - Changes involving Windows OS compatibility
+
+## Usage
+
+Always add appropriate labels based on the PR content and files changed.
+For PRs with multiple areas, add all relevant labels.
