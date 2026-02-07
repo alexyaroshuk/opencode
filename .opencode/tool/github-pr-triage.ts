@@ -10,7 +10,6 @@ function getPRNumber(): number {
 
 async function githubFetch(endpoint: string, options: RequestInit = {}) {
   const url = `https://api.github.com${endpoint}`
-  console.log("Fetching:", url)
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -20,12 +19,12 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
       ...options.headers,
     },
   })
-  console.log("Response status:", response.status, response.statusText)
   if (!response.ok) {
     const error = await response.text()
-    console.log("Response error:", error)
-    return { error, ok: false }
+    throw new Error(`GitHub API ${response.status}: ${error}`)
   }
+  return response.json()
+}
   return response.json()
 }
 
@@ -54,13 +53,13 @@ function getRepoInfo(): { owner: string; repo: string } {
 export default tool({
   description: DESCRIPTION,
   args: {
-    command: tool.schema.string().describe("Command to execute").optional(),
     action: tool.schema.string().describe("Action to perform").optional(),
     label: tool.schema.string().describe("Single label to add").optional(),
     labels: tool.schema.array(tool.schema.string()).describe("Labels to add").optional(),
     reason: tool.schema.string().describe("Reason for the label").optional(),
   },
   async execute(args) {
+    console.log("Tool args received:", JSON.stringify(args))
     const pr = getPRNumber()
     const { owner, repo } = getRepoInfo()
 
@@ -76,6 +75,8 @@ export default tool({
       labels = ["zen"]
     }
 
+    console.log("Labels to add:", JSON.stringify(labels))
+
     if (labels.length > 0) {
       for (const label of labels) {
         await ensureLabelExists(owner, repo, label)
@@ -86,11 +87,12 @@ export default tool({
         body: JSON.stringify(labels),
       })
       console.log("Label API response:", JSON.stringify(response))
-      if (!response.ok) {
-        results.push(`Error adding labels: ${response.error}`)
-      } else {
-        results.push(`Added labels: ${labels.join(", ")}`)
+      if (!response.ok || response.error) {
+        const errMsg = response.error || `Unknown error`
+        results.push(`Failed to add labels: ${errMsg}`)
+        return results.join("\n")
       }
+      results.push(`Added labels: ${labels.join(", ")}`)
     }
 
     return results.join("\n")
