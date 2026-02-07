@@ -49,8 +49,8 @@ export default tool({
   },
   async execute(args) {
     const pr = getPRNumber()
-    const owner = "alexyaroshuk"
-    const repo = "opencode"
+    const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "alexyaroshuk"
+    const repo = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "opencode"
 
     const results: string[] = []
 
