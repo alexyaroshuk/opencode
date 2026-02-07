@@ -5,10 +5,11 @@ on:
     types: [opened, edited, synchronize]
 
 jobs:
-  triage:
+  triage-pr:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write
       pull-requests: write
     steps:
       - name: Checkout repository
@@ -31,7 +32,7 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
-          opencode run --agent github-pr-triage "Analyze this PR and add appropriate labels based on:
+          opencode run --agent pr-triage "Analyze this PR and add appropriate labels based on:
           - The PR title: $PR_TITLE
           - The PR body: $PR_BODY
           - Changed files: $PR_FILES"
