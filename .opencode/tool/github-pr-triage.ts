@@ -54,7 +54,7 @@ export default tool({
 
     const results: string[] = []
 
-    const labels: string[] = ["desktop"]
+    const labels: string[] = ["zen"]
 
     if (labels.length > 0) {
       for (const label of labels) {
