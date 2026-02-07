@@ -42,10 +42,9 @@ async function ensureLabelExists(owner: string, repo: string, label: string) {
 export default tool({
   description: DESCRIPTION,
   args: {
-    labels: tool.schema
-      .array(tool.schema.enum(["nix", "opentui", "perf", "desktop", "zen", "docs", "windows"]))
-      .describe("The label(s) to add to the PR")
-      .default([]),
+    command: tool.schema.string().describe("Command to execute").optional(),
+    label: tool.schema.string().describe("Single label to add").optional(),
+    labels: tool.schema.array(tool.schema.string()).describe("Labels to add").optional(),
   },
   async execute(args) {
     const pr = getPRNumber()
@@ -54,7 +53,15 @@ export default tool({
 
     const results: string[] = []
 
-    const labels: string[] = ["zen"]
+    let labels: string[] = []
+
+    if (args.label) {
+      labels = [args.label]
+    } else if (args.labels) {
+      labels = args.labels
+    } else {
+      labels = ["zen"]
+    }
 
     if (labels.length > 0) {
       for (const label of labels) {
