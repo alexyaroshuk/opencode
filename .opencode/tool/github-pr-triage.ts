@@ -55,8 +55,10 @@ export default tool({
   description: DESCRIPTION,
   args: {
     command: tool.schema.string().describe("Command to execute").optional(),
+    action: tool.schema.string().describe("Action to perform").optional(),
     label: tool.schema.string().describe("Single label to add").optional(),
     labels: tool.schema.array(tool.schema.string()).describe("Labels to add").optional(),
+    reason: tool.schema.string().describe("Reason for the label").optional(),
   },
   async execute(args) {
     const pr = getPRNumber()
