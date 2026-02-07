@@ -39,6 +39,12 @@ async function ensureLabelExists(owner: string, repo: string, label: string) {
   })
 }
 
+function getRepoInfo(): { owner: string; repo: string } {
+  const repoFull = process.env.GITHUB_REPOSITORY ?? ""
+  const [owner, repo] = repoFull.split("/")
+  return { owner: owner ?? "anomalyco", repo: repo ?? "opencode" }
+}
+
 export default tool({
   description: DESCRIPTION,
   args: {
@@ -48,8 +54,7 @@ export default tool({
   },
   async execute(args) {
     const pr = getPRNumber()
-    const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "alexyaroshuk"
-    const repo = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "opencode"
+    const { owner, repo } = getRepoInfo()
 
     const results: string[] = []
 
@@ -69,7 +74,7 @@ export default tool({
       }
       const response = await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
         method: "POST",
-        body: JSON.stringify(labels),
+        body: JSON.stringify({ labels }),
       })
       console.log("Label API response:", JSON.stringify(response))
       if (!response.ok) {
