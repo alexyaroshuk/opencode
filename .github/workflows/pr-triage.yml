@@ -1,11 +1,11 @@
 name: pr-triage
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  pull_request_target:
+    types: [opened, edited, synchronize]
 
 jobs:
-  triage:
+  triage-pr:
     runs-on: ubuntu-latest
     permissions:
       contents: read
