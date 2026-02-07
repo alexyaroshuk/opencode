@@ -75,7 +75,7 @@ export default tool({
 
     await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
       method: "POST",
-      body: JSON.stringify(labels),
+      body: JSON.stringify({ labels }),
     })
 
     return `Added labels: ${labels.join(", ")}`
