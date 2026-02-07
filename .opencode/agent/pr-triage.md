@@ -5,7 +5,7 @@ model: opencode/claude-haiku-4-5
 color: "#44BA81"
 tools:
   "*": false
-  "github-pr-triage.ts": true
+  "pr-triage.ts": true
 ---
 
 You are a triage agent responsible for triaging pull requests.
