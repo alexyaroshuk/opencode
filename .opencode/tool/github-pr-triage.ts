@@ -9,7 +9,9 @@ function getPRNumber(): number {
 }
 
 async function githubFetch(endpoint: string, options: RequestInit = {}) {
-  const response = await fetch(`https://api.github.com${endpoint}`, {
+  const url = `https://api.github.com${endpoint}`
+  console.log("Fetching:", url)
+  const response = await fetch(url, {
     ...options,
     headers: {
       Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
@@ -18,8 +20,10 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
       ...options.headers,
     },
   })
+  console.log("Response status:", response.status, response.statusText)
   if (!response.ok) {
     const error = await response.text()
+    console.log("Response error:", error)
     return { error, ok: false }
   }
   return response.json()
@@ -29,6 +33,7 @@ async function ensureLabelExists(owner: string, repo: string, label: string) {
   const response = await githubFetch(`/repos/${owner}/${repo}/labels/${label}`)
   if (!response.error) return
 
+  console.log("Creating label:", label)
   await githubFetch(`/repos/${owner}/${repo}/labels`, {
     method: "POST",
     body: JSON.stringify({
@@ -41,8 +46,9 @@ async function ensureLabelExists(owner: string, repo: string, label: string) {
 
 function getRepoInfo(): { owner: string; repo: string } {
   const repoFull = process.env.GITHUB_REPOSITORY ?? ""
+  console.log("GITHUB_REPOSITORY:", repoFull)
   const [owner, repo] = repoFull.split("/")
-  return { owner: owner ?? "alexyaroshuk", repo: repo ?? "opencode" }
+  return { owner: owner ?? "anomalyco", repo: repo ?? "opencode" }
 }
 
 export default tool({
@@ -72,9 +78,10 @@ export default tool({
       for (const label of labels) {
         await ensureLabelExists(owner, repo, label)
       }
+      console.log("Adding labels to PR:", owner, repo, pr, labels)
       const response = await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
         method: "POST",
-        body: JSON.stringify({ labels }),
+        body: JSON.stringify(labels),
       })
       console.log("Label API response:", JSON.stringify(response))
       if (!response.ok) {
