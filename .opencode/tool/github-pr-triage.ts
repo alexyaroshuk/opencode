@@ -48,7 +48,7 @@ function getRepoInfo(): { owner: string; repo: string } {
   const repoFull = process.env.GITHUB_REPOSITORY ?? ""
   console.log("GITHUB_REPOSITORY:", repoFull)
   const [owner, repo] = repoFull.split("/")
-  return { owner: owner ?? "anomalyco", repo: repo ?? "opencode" }
+  return { owner: owner ?? "alexyaroshuk", repo: repo ?? "opencode" }
 }
 
 export default tool({
