@@ -54,17 +54,22 @@ export default tool({
 
     const results: string[] = []
 
-    const labels: string[] = args.labels
+    const labels: string[] = ["desktop"]
 
     if (labels.length > 0) {
       for (const label of labels) {
         await ensureLabelExists(owner, repo, label)
       }
-      await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
+      const response = await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
         method: "POST",
-         body: JSON.stringify({ labels }),
+        body: JSON.stringify(labels),
       })
-      results.push(`Added labels: ${args.labels.join(", ")}`)
+      console.log("Label API response:", JSON.stringify(response))
+      if (!response.ok) {
+        results.push(`Error adding labels: ${response.error}`)
+      } else {
+        results.push(`Added labels: ${labels.join(", ")}`)
+      }
     }
 
     return results.join("\n")
