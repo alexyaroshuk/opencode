@@ -6,7 +6,7 @@ on:
 
 jobs:
   triage-pr:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubunbtu-latest
     permissions:
       contents: read
       issues: write
