@@ -64,15 +64,3 @@ TUI issues potentially caused by our underlying TUI library:
 
 **Do not** add for general TUI bugs.
 
-When assigning to people here are the following rules:
-
-adamdotdev:
-ONLY assign adam if the issue will have the "desktop" label.
-
-fwang:
-ONLY assign fwang if the issue will have the "zen" label.
-
-jayair:
-ONLY assign jayair if the issue will have the "docs" label.
-
-In all other cases use best judgment. Avoid assigning to kommander needlessly, when in doubt assign to rekram1-node.
