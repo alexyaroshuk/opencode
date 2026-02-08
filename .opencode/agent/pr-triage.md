@@ -87,11 +87,14 @@ The scope in the PR title is a **strong indicator** for labels:
 | zen      | zen                 |
 | docs     | docs                |
 | nix      | nix                 |
+| tui      | opentui             |
+| opentui  | opentui             |
 
 If the scope is `desktop`, always add the `desktop` label.
 If the scope is `zen`, always add the `zen` label.
 If the scope is `docs`, always add the `docs` label.
 If the scope mentions `nix` or `nixos`, add the `nix` label.
+If the scope mentions `tui` or `opentui`, add the `opentui` label.
 
 Examples:
 
