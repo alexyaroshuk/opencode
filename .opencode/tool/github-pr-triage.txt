@@ -41,6 +41,8 @@ Use scope as a **strong indicator** for labels:
 | zen      | zen                 |
 | docs     | docs                |
 | nix      | nix                 |
+| tui      | opentui             |
+| opentui  | opentui             |
 
 Always add the corresponding label when the scope matches.
 
