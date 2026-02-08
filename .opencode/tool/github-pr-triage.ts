@@ -34,7 +34,7 @@ export default tool({
   },
   async execute(args) {
     const pr = getPRNumber()
-    const owner = "anomalyco"
+    const owner = "alexyaroshuk"
     const repo = "opencode"
 
     const results: string[] = []
