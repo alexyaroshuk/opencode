@@ -34,4 +34,4 @@ jobs:
         run: |
           opencode run --agent pr-triage "Analyze this PR and add appropriate labels based on:
           - The PR title: $PR_TITLE
-          - The PR body: $PR_BODY
+          - The PR body: $PR_BODY"
