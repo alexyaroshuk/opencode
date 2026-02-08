@@ -64,3 +64,8 @@ TUI issues potentially caused by our underlying TUI library:
 
 **Do not** add for general TUI bugs.
 
+
+
+## Translation
+
+If the issue title or body is not in English, translate both the title and body to English and pass them via the `translated_title` and `translated_body` parameters of the github-triage tool. This will post a comment on the issue with the translation so maintainers can understand it.
