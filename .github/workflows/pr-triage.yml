@@ -30,9 +30,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
-          PR_FILES: ${{ github.event.pull_request.changed_files }}
+
         run: |
           opencode run --agent pr-triage "Analyze this PR and add appropriate labels based on:
           - The PR title: $PR_TITLE
           - The PR body: $PR_BODY
-          - Changed files: $PR_FILES"
