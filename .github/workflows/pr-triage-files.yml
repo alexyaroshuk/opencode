@@ -1,0 +1,39 @@
+name: pr-triage-files
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  triage-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Get changed files and assign labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json files --jq '.files[].path')
+          LABELS=""
+
+          for FILE in $FILES; do
+            case "$FILE" in
+              packages/web/*|packages/app/*|packages/desktop/*|packages/ui/*) LABELS="$LABELS web" ;;
+              packages/console/*)  LABELS="$LABELS opentui" ;;
+              packages/docs/*)     LABELS="$LABELS docs" ;;
+              nix/*)               LABELS="$LABELS nix" ;;
+              packages/opencode/src/provider/*) LABELS="$LABELS zen" ;;
+            esac
+          done
+
+          LABELS=$(echo "$LABELS" | tr ' ' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+          if [ -n "$LABELS" ]; then
+            echo "Adding labels: $LABELS"
+            gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "$LABELS"
+          else
+            echo "No labels to add"
+          fi
