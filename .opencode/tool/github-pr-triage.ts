@@ -24,32 +24,17 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
   return response.json()
 }
 
-async function ensureLabelExists(owner: string, repo: string, label: string) {
-  try {
-    await githubFetch(`/repos/${owner}/${repo}/labels/${label}`)
-  } catch {
-    await githubFetch(`/repos/${owner}/${repo}/labels`, {
-      method: "POST",
-      body: JSON.stringify({
-        name: label,
-        color: "ededed",
-        description: label.charAt(0).toUpperCase() + label.slice(1),
-      }),
-    })
-  }
-}
-
 export default tool({
   description: DESCRIPTION,
   args: {
     labels: tool.schema
-      .array(tool.schema.enum(["nix", "opentui", "perf", "desktop", "zen", "docs", "windows"]))
+      .array(tool.schema.enum(["nix", "opentui", "perf", "web", "zen", "docs", "windows"]))
       .describe("The label(s) to add to the PR")
       .default([]),
   },
   async execute(args) {
     const pr = getPRNumber()
-    const owner = "alexyaroshuk"
+    const owner = "anomalyco"
     const repo = "opencode"
 
     const results: string[] = []
@@ -57,9 +42,6 @@ export default tool({
     const labels: string[] = args.labels
 
     if (labels.length > 0) {
-      for (const label of labels) {
-        await ensureLabelExists(owner, repo, label)
-      }
       await githubFetch(`/repos/${owner}/${repo}/issues/${pr}/labels`, {
         method: "POST",
         body: JSON.stringify({ labels }),
