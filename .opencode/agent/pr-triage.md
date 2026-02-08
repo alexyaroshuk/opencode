@@ -30,9 +30,9 @@ Performance-related pull requests:
 
 **Only** add if it's likely a RAM or CPU pull requests. **Do not** add for LLM slowness.
 
-#### desktop
+#### app
 
-Desktop app pull requests:
+Desktop app or web app pull requests:
 
 - `opencode web` command
 - The desktop app itself
@@ -63,3 +63,39 @@ Add if the pull requests addresses TUI issues potentially caused by our underlyi
 - Crashes with opentui in the log
 
 **Do not** add for general TUI bugfixes.
+
+## Conventional Commits
+
+PR titles should follow conventional commit format:
+
+```
+type(scope): description
+```
+
+Where `type` is one of: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
+And `scope` is the affected package (e.g., app, desktop, opencode)
+
+### Label Inference from Scope
+
+The scope in the PR title is a **strong indicator** for labels:
+
+| Scope    | Label               |
+| -------- | ------------------- |
+| desktop  | web                 |
+| app      | web                 |
+| opencode | (no specific label) |
+| zen      | zen                 |
+| docs     | docs                |
+| nix      | nix                 |
+
+If the scope is `desktop`, always add the `desktop` label.
+If the scope is `zen`, always add the `zen` label.
+If the scope is `docs`, always add the `docs` label.
+If the scope mentions `nix` or `nixos`, add the `nix` label.
+
+Examples:
+
+- `fix(desktop): resolve crash on startup` → add `web` label
+- `feat(app): add dark mode support` → add `web` label
+- `docs: update contributing guidelines` → add `docs` label
+- `fix: resolve crash on startup` → infer from content (not scope)
