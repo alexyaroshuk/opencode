@@ -15,15 +15,18 @@ interface ConflictInfo {
   lines: string[]
 }
 
+const REPO = "anomalyco/opencode"
+
 async function fetchPRs(): Promise<PR[]> {
-  const result = await $`gh pr list --state open --json number,title,headRefName,baseRefName,mergeable`.quiet()
+  const result =
+    await $`gh pr list --repo ${REPO} --state open --json number,title,headRefName,baseRefName,mergeable`.quiet()
   const prs = JSON.parse(result.stdout.toString()) as PR[]
   return prs.filter((pr) => pr.mergeable !== "UNKNOWN")
 }
 
 async function updateBranch(prNumber: number): Promise<boolean> {
   try {
-    await $`gh pr update-branch ${prNumber.toString()}`.quiet()
+    await $`gh pr update-branch ${prNumber.toString()} --repo ${REPO}`.quiet()
     return true
   } catch {
     return false
