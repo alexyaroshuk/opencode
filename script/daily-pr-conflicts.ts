@@ -16,6 +16,14 @@ interface ConflictInfo {
 }
 
 const REPO = "anomalyco/opencode"
+const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
+
+async function setupUpstream() {
+  try {
+    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
+  } catch {}
+  await $`git fetch upstream --quiet`.quiet()
+}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -47,12 +55,12 @@ async function getConflictDetails(pr: PR): Promise<ConflictInfo[]> {
   const prBranch = `pr-${pr.number}`
 
   try {
-    await $`git fetch origin pull/${pr.number}/head:${prBranch}`.quiet()
+    await $`git fetch upstream pull/${pr.number}/head:${prBranch}`.quiet()
 
-    const baseResult = await $`git merge-base origin/${pr.baseRefName} ${prBranch}`.quiet()
+    const baseResult = await $`git merge-base upstream/${pr.baseRefName} ${prBranch}`.quiet()
     const mergeBase = baseResult.stdout.toString().trim()
 
-    const mergeResult = await $`git merge-tree ${mergeBase} origin/${pr.baseRefName} ${prBranch}`.nothrow().quiet()
+    const mergeResult = await $`git merge-tree ${mergeBase} upstream/${pr.baseRefName} ${prBranch}`.nothrow().quiet()
     const output = mergeResult.stdout.toString()
 
     if (output.includes("conflict") || mergeResult.exitCode !== 0) {
@@ -99,6 +107,9 @@ async function getConflictDetails(pr: PR): Promise<ConflictInfo[]> {
 }
 
 async function main() {
+  console.log("Setting up upstream remote...")
+  await setupUpstream()
+
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
