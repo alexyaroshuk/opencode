@@ -17,9 +17,18 @@ interface ConflictInfo {
 
 const REPO = "anomalyco/opencode"
 
+async function getAuthor(): Promise<string> {
+  const envAuthor = process.env.GITHUB_ACTOR
+  if (envAuthor) return envAuthor
+
+  const result = await $`gh api user --jq .login`.quiet()
+  return result.stdout.toString().trim()
+}
+
 async function fetchPRs(): Promise<PR[]> {
+  const author = await getAuthor()
   const result =
-    await $`gh pr list --repo ${REPO} --state open --json number,title,headRefName,baseRefName,mergeable`.quiet()
+    await $`gh pr list --repo ${REPO} --author ${author} --state open --json number,title,headRefName,baseRefName,mergeable`.quiet()
   const prs = JSON.parse(result.stdout.toString()) as PR[]
   return prs.filter((pr) => pr.mergeable !== "UNKNOWN")
 }
