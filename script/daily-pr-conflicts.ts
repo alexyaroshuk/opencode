@@ -7,23 +7,14 @@ interface PR {
   title: string
   headRefName: string
   baseRefName: string
-  mergeable: "MERGEABLE" | "CONFLICTING" | "UNKNOWN"
 }
 
-interface ConflictInfo {
-  path: string
-  lines: string[]
+interface ConflictDetails {
+  files: string[]
+  totalLines: number
 }
 
 const REPO = "anomalyco/opencode"
-const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
-
-async function setupUpstream() {
-  try {
-    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
-  } catch {}
-  await $`git fetch upstream --quiet`.quiet()
-}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -36,142 +27,109 @@ async function getAuthor(): Promise<string> {
 async function fetchPRs(): Promise<PR[]> {
   const author = await getAuthor()
   const result =
-    await $`gh pr list --repo ${REPO} --author ${author} --state open --json number,title,headRefName,baseRefName,mergeable`.quiet()
-  const prs = JSON.parse(result.stdout.toString()) as PR[]
-  return prs.filter((pr) => pr.mergeable !== "UNKNOWN")
+    await $`gh pr list --repo ${REPO} --author ${author} --state open --json number,title,headRefName,baseRefName`.quiet()
+  return JSON.parse(result.stdout.toString()) as PR[]
 }
 
-async function updateBranch(prNumber: number): Promise<boolean> {
+async function updateBranch(prNumber: number): Promise<{ success: boolean; error?: string }> {
   try {
-    await $`gh pr update-branch ${prNumber.toString()} --repo ${REPO}`.quiet()
-    return true
-  } catch {
-    return false
+    const [owner, repo] = REPO.split("/")
+    await $`gh api repos/${owner}/${repo}/pulls/${prNumber}/update-branch --method PUT`.quiet()
+    return { success: true }
+  } catch (error: any) {
+    const errMsg = error.stderr?.toString() || error.message || ""
+    if (errMsg.includes("merge conflict") || errMsg.includes("Conflict")) {
+      return { success: false, error: "Merge conflict" }
+    }
+    return { success: false, error: errMsg }
   }
 }
 
-async function getConflictDetails(pr: PR): Promise<ConflictInfo[]> {
-  const conflicts: ConflictInfo[] = []
-  const prBranch = `pr-${pr.number}`
-
+async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
   try {
-    await $`git fetch upstream pull/${pr.number}/head:${prBranch}`.quiet()
+    const filesResult =
+      await $`gh pr view ${pr.number.toString()} --repo ${REPO} --json files --jq '.files[].path'`.quiet()
+    const files = filesResult.stdout.toString().trim().split("\n").filter(Boolean)
 
-    const baseResult = await $`git merge-base upstream/${pr.baseRefName} ${prBranch}`.quiet()
-    const mergeBase = baseResult.stdout.toString().trim()
-
-    const mergeResult = await $`git merge-tree ${mergeBase} upstream/${pr.baseRefName} ${prBranch}`.nothrow().quiet()
-    const output = mergeResult.stdout.toString()
-
-    if (output.includes("conflict") || mergeResult.exitCode !== 0) {
-      const lines = output.split("\n")
-      let currentFile = ""
-      let conflictLines: string[] = []
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-
-        if (line.startsWith("added in both")) {
-          const parts = line.split(" ")
-          currentFile = parts[parts.length - 1]
-          conflictLines = []
-        } else if (line.startsWith("removed in one")) {
-          const parts = line.split(" ")
-          currentFile = parts[parts.length - 1]
-          conflictLines = []
-        } else if (line.startsWith("modified in both")) {
-          const match = line.match(/modified in both:\s+(.+)$/)
-          if (match) {
-            currentFile = match[1]
-            conflictLines = []
-          }
-        } else if (currentFile && (line.includes("<<<<<<<") || line.includes(">>>>>>>") || line.includes("======="))) {
-          conflictLines.push(`line ${i}`)
-        }
-      }
-
-      if (currentFile && conflictLines.length > 0) {
-        conflicts.push({
-          path: currentFile,
-          lines: conflictLines.slice(0, 5),
-        })
-      }
+    let totalLines = 0
+    for (const file of files.slice(0, 10)) {
+      try {
+        const diffResult =
+          await $`gh api repos/anomalyco/opencode/pulls/${pr.number}/files --paginate --jq '.[] | select(.filename == "${file}") | .patch'`.quiet()
+        const diff = diffResult.stdout.toString()
+        const lines = diff.split("\n").filter((line) => line.startsWith("+") || line.startsWith("-")).length
+        totalLines += lines
+      } catch {}
     }
 
-    await $`git branch -D ${prBranch}`.nothrow().quiet()
-  } catch (error) {
-    console.error(`Error analyzing PR #${pr.number}:`, error)
+    return { files: files.slice(0, 20), totalLines }
+  } catch {
+    return null
   }
-
-  return conflicts
 }
 
 async function main() {
-  console.log("Setting up upstream remote...")
-  await setupUpstream()
-
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
 
   if (prs.length === 0) {
     console.log("No open PRs found.")
-    process.exit(0)
+    return
   }
 
-  console.log(`Found ${prs.length} open PRs\n`)
+  console.log(`Found ${prs.length} open PR(s)\n`)
 
   const updated: PR[] = []
-  const conflicted: { pr: PR; conflicts: ConflictInfo[] }[] = []
+  const conflicted: { pr: PR; details: ConflictDetails | null }[] = []
 
   for (const pr of prs) {
-    if (pr.mergeable === "MERGEABLE") {
-      const success = await updateBranch(pr.number)
-      if (success) {
-        updated.push(pr)
-        console.log(`✅ Updated PR #${pr.number}: ${pr.title}`)
-      } else {
-        console.log(`⚠️ Failed to update PR #${pr.number}: ${pr.title}`)
+    console.log(`PR #${pr.number}: ${pr.title}`)
+
+    process.stdout.write("   Checking... ")
+    const result = await updateBranch(pr.number)
+
+    if (result.success) {
+      console.log("✅ Updated (no conflicts)")
+      updated.push(pr)
+    } else {
+      console.log("❌ Has conflicts")
+      process.stdout.write("   Analyzing conflicts... ")
+      const details = await getConflictDetails(pr)
+      console.log("done")
+      conflicted.push({ pr, details })
+
+      if (details) {
+        console.log(`   📁 Files with conflicts: ${details.files.length}`)
+        console.log(`   📝 Total changed lines: ~${details.totalLines}`)
+        console.log("   📄 Files:")
+        for (const file of details.files.slice(0, 5)) {
+          console.log(`      - ${file}`)
+        }
+        if (details.files.length > 5) {
+          console.log(`      ... and ${details.files.length - 5} more`)
+        }
       }
-    } else if (pr.mergeable === "CONFLICTING") {
-      console.log(`Analyzing conflicts for PR #${pr.number}...`)
-      const conflicts = await getConflictDetails(pr)
-      conflicted.push({ pr, conflicts })
-    }
-  }
-
-  console.log("\n" + "=".repeat(50) + "\n")
-
-  if (updated.length > 0) {
-    console.log(`✅ Successfully updated ${updated.length} PR(s):`)
-    for (const pr of updated) {
-      console.log(`   #${pr.number}: ${pr.title}`)
     }
     console.log()
   }
 
+  console.log("=".repeat(50))
+  console.log(`\nSummary:`)
+  console.log(`  ✅ Updated: ${updated.length}`)
+  console.log(`  ❌ Conflicts: ${conflicted.length}`)
+
   if (conflicted.length > 0) {
-    console.log(`❌ ${conflicted.length} PR(s) have conflicts:\n`)
-    for (const { pr, conflicts } of conflicted) {
-      console.log(`PR #${pr.number}: ${pr.title}`)
-      if (conflicts.length === 0) {
-        console.log(`   (conflict details unavailable - manual check required)`)
-      } else {
-        for (const conflict of conflicts) {
-          console.log(`   ${conflict.path}`)
-        }
+    console.log("\n❌ PRs with conflicts:")
+    for (const { pr, details } of conflicted) {
+      console.log(`  #${pr.number}: ${pr.title}`)
+      if (details) {
+        console.log(`     📁 ${details.files.length} files, ~${details.totalLines} lines changed`)
       }
-      console.log()
     }
   }
 
-  const unchanged = prs.length - updated.length - conflicted.length
-  if (unchanged > 0) {
-    console.log(`ℹ️ ${unchanged} PR(s) unchanged (unknown merge status)`)
-  }
-
-  console.log("\n" + "=".repeat(50))
-  console.log(`\nSummary: ${updated.length} updated, ${conflicted.length} with conflicts`)
+  console.log()
 }
 
 main().catch((error) => {
