@@ -15,6 +15,14 @@ interface ConflictDetails {
 }
 
 const REPO = "anomalyco/opencode"
+const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
+
+async function setupUpstream() {
+  try {
+    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
+  } catch {}
+  await $`git fetch upstream --quiet`.quiet()
+}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -31,20 +39,50 @@ async function fetchPRs(): Promise<PR[]> {
   return JSON.parse(result.stdout.toString()) as PR[]
 }
 
-async function updateBranch(prNumber: number): Promise<{ success: boolean; hasConflict?: boolean; error?: string }> {
+async function checkPRStatus(pr: PR): Promise<{ updatable: boolean; hasConflict: boolean }> {
+  const tempBranch = `temp-check-${pr.number}`
+
   try {
-    const [owner, repo] = REPO.split("/")
-    await $`gh api repos/${owner}/${repo}/pulls/${prNumber}/update-branch --method PUT`.quiet()
-    return { success: true }
-  } catch (error: any) {
-    const errMsg = error.stderr?.toString() || error.message || ""
-    if (errMsg.includes("merge conflict between base and head")) {
-      return { success: false, hasConflict: true, error: "Merge conflict" }
+    await $`git fetch upstream pull/${pr.number}/head:${tempBranch}`.quiet()
+
+    const currentBranch = (await $`git branch --show-current`.quiet()).stdout.toString().trim()
+
+    await $`git checkout ${tempBranch}`.quiet()
+
+    const mergeResult = await $`git merge upstream/${pr.baseRefName} --no-edit`.nothrow().quiet()
+
+    await $`git checkout ${currentBranch}`.quiet()
+    await $`git branch -D ${tempBranch}`.quiet()
+
+    if (mergeResult.exitCode === 0) {
+      return { updatable: true, hasConflict: false }
+    } else {
+      return { updatable: false, hasConflict: true }
     }
-    if (errMsg.includes("no new commits")) {
-      return { success: true }
-    }
-    return { success: false, error: errMsg }
+  } catch {
+    await $`git checkout -`.nothrow().quiet()
+    await $`git branch -D ${tempBranch}`.nothrow().quiet()
+    return { updatable: false, hasConflict: false }
+  }
+}
+
+async function updatePR(pr: PR): Promise<boolean> {
+  const tempBranch = `temp-update-${pr.number}`
+  const currentBranch = (await $`git branch --show-current`.quiet()).stdout.toString().trim()
+
+  try {
+    await $`git fetch upstream pull/${pr.number}/head:${tempBranch}`.quiet()
+    await $`git checkout ${tempBranch}`.quiet()
+    await $`git merge upstream/${pr.baseRefName} --no-edit`.quiet()
+    await $`git push origin ${tempBranch}:${pr.headRefName} --force-with-lease`.quiet()
+    await $`git checkout ${currentBranch}`.quiet()
+    await $`git branch -D ${tempBranch}`.quiet()
+    return true
+  } catch {
+    await $`git merge --abort`.nothrow().quiet()
+    await $`git checkout ${currentBranch}`.nothrow().quiet()
+    await $`git branch -D ${tempBranch}`.nothrow().quiet()
+    return false
   }
 }
 
@@ -72,6 +110,9 @@ async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
 }
 
 async function main() {
+  console.log("Setting up upstream remote...")
+  await setupUpstream()
+
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
@@ -90,22 +131,26 @@ async function main() {
     console.log(`PR #${pr.number}: ${pr.title}`)
 
     process.stdout.write("   Checking... ")
-    const result = await updateBranch(pr.number)
+    const status = await checkPRStatus(pr)
 
-    if (result.success) {
-      console.log("✅ Updated (no conflicts)")
-      updated.push(pr)
-    } else if (result.hasConflict) {
+    if (status.updatable) {
+      process.stdout.write("updating... ")
+      const success = await updatePR(pr)
+      if (success) {
+        console.log("✅ Updated")
+        updated.push(pr)
+      } else {
+        console.log("❌ Failed")
+      }
+    } else if (status.hasConflict) {
       console.log("❌ Has conflicts")
-      process.stdout.write("   Analyzing conflicts... ")
+      process.stdout.write("   Analyzing... ")
       const details = await getConflictDetails(pr)
       console.log("done")
       conflicted.push({ pr, details })
 
       if (details) {
-        console.log(`   📁 Files with conflicts: ${details.files.length}`)
-        console.log(`   📝 Total changed lines: ~${details.totalLines}`)
-        console.log("   📄 Files:")
+        console.log(`   📁 Files: ${details.files.length} | Lines: ~${details.totalLines}`)
         for (const file of details.files.slice(0, 5)) {
           console.log(`      - ${file}`)
         }
@@ -114,7 +159,7 @@ async function main() {
         }
       }
     } else {
-      console.log(`⚠️ Error: ${result.error?.slice(0, 80)}`)
+      console.log("⚠️ Check failed")
     }
     console.log()
   }
@@ -129,7 +174,7 @@ async function main() {
     for (const { pr, details } of conflicted) {
       console.log(`  #${pr.number}: ${pr.title}`)
       if (details) {
-        console.log(`     📁 ${details.files.length} files, ~${details.totalLines} lines changed`)
+        console.log(`     📁 ${details.files.length} files, ~${details.totalLines} lines`)
       }
     }
   }
