@@ -1,0 +1,43 @@
+name: test-pr-triage-files
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to triage"
+        required: true
+        type: number
+
+jobs:
+  test-triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Get changed files and assign labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES=$(gh pr view ${{ inputs.pr_number }} --repo ${{ github.repository }} --json files --jq '.files[].path')
+          LABELS=""
+
+          for FILE in $FILES; do
+            case "$FILE" in
+              packages/web/*|packages/app/*|packages/desktop/*|packages/ui/*) LABELS="$LABELS web" ;;
+              packages/console/*)  LABELS="$LABELS opentui" ;;
+              packages/docs/*)     LABELS="$LABELS docs" ;;
+              nix/*)               LABELS="$LABELS nix" ;;
+              packages/opencode/src/provider/*) LABELS="$LABELS zen" ;;
+            esac
+          done
+
+          LABELS=$(echo "$LABELS" | xargs -n1 | sort -u | paste -sd, -)
+
+          if [ -n "$LABELS" ]; then
+            echo "Adding labels: $LABELS"
+            gh pr edit ${{ inputs.pr_number }} --repo ${{ github.repository }} --add-label "$LABELS"
+          else
+            echo "No labels to add"
+          fi

@@ -28,19 +28,27 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
 export default tool({
   description: DESCRIPTION,
   args: {
-    assignee: tool.schema
+/*     assignee: tool.schema
       .enum(["thdxr", "adamdotdevin", "rekram1-node", "fwang", "jayair", "kommander"])
       .describe("The username of the assignee")
-      .default("rekram1-node"),
+      .default("rekram1-node"), */
     labels: tool.schema
       .array(tool.schema.enum(["nix", "opentui", "perf", "desktop", "zen", "docs", "windows"]))
       .describe("The labels(s) to add to the issue")
       .default([]),
+    translated_title: tool.schema
+      .string()
+      .describe("English translation of the issue title, if the original is not in English")
+      .optional(),
+    translated_body: tool.schema
+      .string()
+      .describe("English translation of the issue body, if the original is not in English")
+      .optional(),
   },
   async execute(args) {
     const issue = getIssueNumber()
     // const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN })
-    const owner = "anomalyco"
+    const owner = "alexyaroshuk"
     const repo = "opencode"
 
     const results: string[] = []
@@ -63,13 +71,29 @@ export default tool({
     //   issue_number: issue,
     //   assignees: [args.assignee],
     // })
-    await githubFetch(`/repos/${owner}/${repo}/issues/${issue}/assignees`, {
+    /* await githubFetch(`/repos/${owner}/${repo}/issues/${issue}/assignees`, {
       method: "POST",
       body: JSON.stringify({ assignees: [args.assignee] }),
     })
-    results.push(`Assigned @${args.assignee} to issue #${issue}`)
+    results.push(`Assigned @${args.assignee} to issue #${issue}`) */
 
     const labels: string[] = args.labels.map((label) => (label === "desktop" ? "web" : label))
+
+    if (args.translated_title || args.translated_body) {
+      const parts: string[] = []
+      if (args.translated_title) {
+        parts.push(`**Translated title:** ${args.translated_title}`)
+      }
+      if (args.translated_body) {
+        parts.push(`**Translated body:**\n\n${args.translated_body}`)
+      }
+      const body = parts.join("\n\n---\n\n")
+      await githubFetch(`/repos/${owner}/${repo}/issues/${issue}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      })
+      results.push(`Posted translation comment on issue #${issue}`)
+    }
 
     if (labels.length > 0) {
       // await octokit.rest.issues.addLabels({
