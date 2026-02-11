@@ -31,15 +31,18 @@ async function fetchPRs(): Promise<PR[]> {
   return JSON.parse(result.stdout.toString()) as PR[]
 }
 
-async function updateBranch(prNumber: number): Promise<{ success: boolean; error?: string }> {
+async function updateBranch(prNumber: number): Promise<{ success: boolean; hasConflict?: boolean; error?: string }> {
   try {
     const [owner, repo] = REPO.split("/")
     await $`gh api repos/${owner}/${repo}/pulls/${prNumber}/update-branch --method PUT`.quiet()
     return { success: true }
   } catch (error: any) {
     const errMsg = error.stderr?.toString() || error.message || ""
-    if (errMsg.includes("merge conflict") || errMsg.includes("Conflict")) {
-      return { success: false, error: "Merge conflict" }
+    if (errMsg.includes("merge conflict between base and head")) {
+      return { success: false, hasConflict: true, error: "Merge conflict" }
+    }
+    if (errMsg.includes("no new commits")) {
+      return { success: true }
     }
     return { success: false, error: errMsg }
   }
@@ -92,7 +95,7 @@ async function main() {
     if (result.success) {
       console.log("✅ Updated (no conflicts)")
       updated.push(pr)
-    } else {
+    } else if (result.hasConflict) {
       console.log("❌ Has conflicts")
       process.stdout.write("   Analyzing conflicts... ")
       const details = await getConflictDetails(pr)
@@ -110,6 +113,8 @@ async function main() {
           console.log(`      ... and ${details.files.length - 5} more`)
         }
       }
+    } else {
+      console.log(`⚠️ Error: ${result.error?.slice(0, 80)}`)
     }
     console.log()
   }
