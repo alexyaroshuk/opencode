@@ -15,6 +15,14 @@ interface ConflictDetails {
 }
 
 const REPO = "anomalyco/opencode"
+const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
+
+async function setupUpstream() {
+  try {
+    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
+  } catch {}
+  await $`git fetch upstream --quiet`.quiet()
+}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -31,20 +39,39 @@ async function fetchPRs(): Promise<PR[]> {
   return JSON.parse(result.stdout.toString()) as PR[]
 }
 
-async function updateBranch(prNumber: number): Promise<{ success: boolean; hasConflict?: boolean; error?: string }> {
+async function tryUpdateBranch(pr: PR): Promise<{ success: boolean; hasConflict?: boolean; error?: string }> {
+  const tempBranch = `temp-update-${pr.number}`
+
   try {
-    const [owner, repo] = REPO.split("/")
-    await $`gh api repos/${owner}/${repo}/pulls/${prNumber}/update-branch --method PUT`.quiet()
-    return { success: true }
-  } catch (error: any) {
-    const errMsg = error.stderr?.toString() || error.message || ""
-    if (errMsg.includes("merge conflict between base and head")) {
-      return { success: false, hasConflict: true, error: "Merge conflict" }
-    }
-    if (errMsg.includes("no new commits")) {
+    console.log("fetch...")
+    await $`git fetch upstream pull/${pr.number}/head:${tempBranch}`.timeout(30000).quiet()
+
+    console.log("checkout...")
+    await $`git checkout ${tempBranch}`.timeout(10000).quiet()
+
+    try {
+      console.log("merge...")
+      await $`git merge upstream/${pr.baseRefName} --no-edit`.timeout(30000).quiet()
+
+      console.log("push...")
+      await $`git push origin ${tempBranch}:${pr.headRefName} --force-with-lease`.timeout(30000).quiet()
+
+      await $`git checkout -`.timeout(10000).quiet()
+      await $`git branch -D ${tempBranch}`.quiet()
+
       return { success: true }
+    } catch (mergeError: any) {
+      console.log("abort...")
+      await $`git merge --abort`.nothrow().quiet()
+      await $`git checkout -`.timeout(10000).quiet()
+      await $`git branch -D ${tempBranch}`.quiet()
+      return { success: false, hasConflict: true }
     }
-    return { success: false, error: errMsg }
+  } catch (error: any) {
+    console.log("cleanup...")
+    await $`git checkout -`.nothrow().quiet()
+    await $`git branch -D ${tempBranch}`.nothrow().quiet()
+    return { success: false, error: error.message }
   }
 }
 
@@ -72,6 +99,9 @@ async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
 }
 
 async function main() {
+  console.log("Setting up upstream remote...")
+  await setupUpstream()
+
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
@@ -90,7 +120,7 @@ async function main() {
     console.log(`PR #${pr.number}: ${pr.title}`)
 
     process.stdout.write("   Checking... ")
-    const result = await updateBranch(pr.number)
+    const result = await tryUpdateBranch(pr)
 
     if (result.success) {
       console.log("✅ Updated (no conflicts)")
@@ -114,7 +144,7 @@ async function main() {
         }
       }
     } else {
-      console.log(`⚠️ Error: ${result.error?.slice(0, 80)}`)
+      console.log("⚠️ Failed to check")
     }
     console.log()
   }
