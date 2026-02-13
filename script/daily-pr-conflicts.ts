@@ -26,17 +26,21 @@ async function fetchPRs(): Promise<PR[]> {
   return JSON.parse(result.stdout.toString()) as PR[]
 }
 
-async function checkPRStatus(pr: PR): Promise<{ updatable: boolean; hasConflict: boolean }> {
-  const result = await $`gh pr view ${pr.number} --repo ${REPO} --json mergeable --jq .mergeable`.quiet()
-  const mergeable = result.stdout.toString().trim()
+async function checkPRStatus(pr: PR, retries = 3): Promise<{ updatable: boolean; hasConflict: boolean }> {
+  for (let i = 0; i < retries; i++) {
+    const result = await $`gh pr view ${pr.number} --repo ${REPO} --json mergeable --jq .mergeable`.quiet()
+    const mergeable = result.stdout.toString().trim()
 
-  if (mergeable === "MERGEABLE") {
-    return { updatable: true, hasConflict: false }
-  } else if (mergeable === "CONFLICTING") {
-    return { updatable: false, hasConflict: true }
-  } else {
-    return { updatable: false, hasConflict: false }
+    if (mergeable === "MERGEABLE") {
+      return { updatable: true, hasConflict: false }
+    } else if (mergeable === "CONFLICTING") {
+      return { updatable: false, hasConflict: true }
+    } else if (mergeable === "UNKNOWN" && i < retries - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      continue
+    }
   }
+  return { updatable: false, hasConflict: false }
 }
 
 async function updatePR(pr: PR): Promise<boolean> {
