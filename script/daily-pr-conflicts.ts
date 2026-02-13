@@ -9,20 +9,7 @@ interface PR {
   baseRefName: string
 }
 
-interface ConflictDetails {
-  files: string[]
-  totalLines: number
-}
-
 const REPO = "anomalyco/opencode"
-const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
-
-async function setupUpstream() {
-  try {
-    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
-  } catch {}
-  await $`git fetch upstream --quiet`.quiet()
-}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -40,56 +27,30 @@ async function fetchPRs(): Promise<PR[]> {
 }
 
 async function checkPRStatus(pr: PR): Promise<{ updatable: boolean; hasConflict: boolean }> {
-  const tempBranch = `temp-check-${pr.number}`
+  const result = await $`gh pr view ${pr.number} --repo ${REPO} --json mergeable --jq .mergeable`.quiet()
+  const mergeable = result.stdout.toString().trim()
 
-  try {
-    await $`git fetch upstream pull/${pr.number}/head:${tempBranch}`.quiet()
-
-    const currentBranch = (await $`git branch --show-current`.quiet()).stdout.toString().trim()
-
-    await $`git checkout ${tempBranch}`.quiet()
-
-    const mergeResult = await $`git merge upstream/${pr.baseRefName} --no-edit`.nothrow().quiet()
-
-    await $`git checkout ${currentBranch}`.quiet()
-    await $`git branch -D ${tempBranch}`.quiet()
-
-    if (mergeResult.exitCode === 0) {
-      return { updatable: true, hasConflict: false }
-    } else {
-      return { updatable: false, hasConflict: true }
-    }
-  } catch {
-    await $`git checkout -`.nothrow().quiet()
-    await $`git branch -D ${tempBranch}`.nothrow().quiet()
+  if (mergeable === "MERGEABLE") {
+    return { updatable: true, hasConflict: false }
+  } else if (mergeable === "CONFLICTING") {
+    return { updatable: false, hasConflict: true }
+  } else {
     return { updatable: false, hasConflict: false }
   }
 }
 
 async function updatePR(pr: PR): Promise<boolean> {
-  const tempBranch = `temp-update-${pr.number}`
-  const currentBranch = (await $`git branch --show-current`.quiet()).stdout.toString().trim()
-
   try {
-    await $`git fetch upstream pull/${pr.number}/head:${tempBranch}`.quiet()
-    await $`git checkout ${tempBranch}`.quiet()
-    await $`git merge upstream/${pr.baseRefName} --no-edit`.quiet()
-    await $`git push origin ${tempBranch}:${pr.headRefName} --force-with-lease`.quiet()
-    await $`git checkout ${currentBranch}`.quiet()
-    await $`git branch -D ${tempBranch}`.quiet()
+    await $`gh pr update-branch ${pr.number} --repo ${REPO}`.quiet()
     return true
   } catch {
-    await $`git merge --abort`.nothrow().quiet()
-    await $`git checkout ${currentBranch}`.nothrow().quiet()
-    await $`git branch -D ${tempBranch}`.nothrow().quiet()
     return false
   }
 }
 
-async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
+async function getConflictDetails(pr: PR) {
   try {
-    const filesResult =
-      await $`gh pr view ${pr.number.toString()} --repo ${REPO} --json files --jq '.files[].path'`.quiet()
+    const filesResult = await $`gh pr view ${pr.number} --repo ${REPO} --json files --jq '.files[].path'`.quiet()
     const files = filesResult.stdout.toString().trim().split("\n").filter(Boolean)
 
     let totalLines = 0
@@ -98,7 +59,7 @@ async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
         const diffResult =
           await $`gh api repos/anomalyco/opencode/pulls/${pr.number}/files --paginate --jq '.[] | select(.filename == "${file}") | .patch'`.quiet()
         const diff = diffResult.stdout.toString()
-        const lines = diff.split("\n").filter((line) => line.startsWith("+") || line.startsWith("-")).length
+        const lines = diff.split("\n").filter((line: string) => line.startsWith("+") || line.startsWith("-")).length
         totalLines += lines
       } catch {}
     }
@@ -110,9 +71,6 @@ async function getConflictDetails(pr: PR): Promise<ConflictDetails | null> {
 }
 
 async function main() {
-  console.log("Setting up upstream remote...")
-  await setupUpstream()
-
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
@@ -125,7 +83,8 @@ async function main() {
   console.log(`Found ${prs.length} open PR(s)\n`)
 
   const updated: PR[] = []
-  const conflicted: { pr: PR; details: ConflictDetails | null }[] = []
+  const conflicted: { pr: PR; details: ReturnType<typeof getConflictDetails> extends Promise<infer T> ? T : never }[] =
+    []
 
   for (const pr of prs) {
     console.log(`PR #${pr.number}: ${pr.title}`)
