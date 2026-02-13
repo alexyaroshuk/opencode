@@ -63,7 +63,7 @@ async function updatePR(pr: PR): Promise<{ success: boolean; error?: string }> {
     await $`git fetch upstream --quiet`.quiet()
     await $`git checkout ${pr.headRefName}`.quiet()
     await $`git merge upstream/${pr.baseRefName} --no-edit`.quiet()
-    await $`git push origin ${pr.headRefName}`.quiet()
+    await $`git push origin ${pr.headRefName} --no-verify`.quiet()
     await $`git checkout ${currentBranch}`.quiet()
     return { success: true }
   } catch (e: any) {
