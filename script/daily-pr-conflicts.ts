@@ -10,6 +10,14 @@ interface PR {
 }
 
 const REPO = "anomalyco/opencode"
+const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
+
+async function setupUpstream() {
+  try {
+    await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
+  } catch {}
+  await $`git fetch upstream --quiet`.quiet()
+}
 
 async function getAuthor(): Promise<string> {
   const envAuthor = process.env.GITHUB_ACTOR
@@ -44,13 +52,20 @@ async function checkPRStatus(pr: PR, retries = 3): Promise<{ updatable: boolean;
 }
 
 async function updatePR(pr: PR): Promise<{ success: boolean; error?: string }> {
+  const currentBranch = (await $`git branch --show-current`.quiet()).stdout.toString().trim()
+
   try {
-    await $`gh pr update-branch ${pr.number} --repo ${REPO}`.quiet()
+    await $`git fetch upstream --quiet`.quiet()
+    await $`git checkout ${pr.headRefName}`.quiet()
+    await $`git merge upstream/${pr.baseRefName} --no-edit`.quiet()
+    await $`git push origin ${pr.headRefName}`.quiet()
+    await $`git checkout ${currentBranch}`.quiet()
     return { success: true }
   } catch (e: any) {
-    const stderr = e?.stderr?.toString() || ""
-    const stdout = e?.stdout?.toString() || ""
-    return { success: false, error: stderr || stdout || "Unknown error" }
+    const error = e?.stderr?.toString() || e?.stdout?.toString() || "Update failed"
+    await $`git merge --abort`.nothrow().quiet()
+    await $`git checkout ${currentBranch}`.nothrow().quiet()
+    return { success: false, error }
   }
 }
 
@@ -77,6 +92,9 @@ async function getConflictDetails(pr: PR) {
 }
 
 async function main() {
+  console.log("Setting up upstream remote...")
+  await setupUpstream()
+
   console.log("Fetching open PRs...\n")
 
   const prs = await fetchPRs()
