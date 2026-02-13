@@ -43,12 +43,14 @@ async function checkPRStatus(pr: PR, retries = 3): Promise<{ updatable: boolean;
   return { updatable: false, hasConflict: false }
 }
 
-async function updatePR(pr: PR): Promise<boolean> {
+async function updatePR(pr: PR): Promise<{ success: boolean; error?: string }> {
   try {
     await $`gh pr update-branch ${pr.number} --repo ${REPO}`.quiet()
-    return true
-  } catch {
-    return false
+    return { success: true }
+  } catch (e: any) {
+    const stderr = e?.stderr?.toString() || ""
+    const stdout = e?.stdout?.toString() || ""
+    return { success: false, error: stderr || stdout || "Unknown error" }
   }
 }
 
@@ -98,12 +100,12 @@ async function main() {
 
     if (status.updatable) {
       process.stdout.write("updating... ")
-      const success = await updatePR(pr)
-      if (success) {
+      const result = await updatePR(pr)
+      if (result.success) {
         console.log("✅ Updated")
         updated.push(pr)
       } else {
-        console.log("❌ Failed")
+        console.log(`❌ Failed: ${result.error}`)
       }
     } else if (status.hasConflict) {
       console.log("❌ Has conflicts")
