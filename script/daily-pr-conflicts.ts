@@ -12,6 +12,11 @@ interface PR {
 const REPO = "anomalyco/opencode"
 const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
 
+async function setupGit() {
+  await $`git config user.name "${process.env.GITHUB_ACTOR || "GitHub Actions"}"`.quiet()
+  await $`git config user.email "${process.env.GITHUB_ACTOR || "github-actions"}@users.noreply.github.com"`.quiet()
+}
+
 async function setupUpstream() {
   try {
     await $`git remote add upstream ${UPSTREAM_URL}`.nothrow().quiet()
@@ -92,6 +97,9 @@ async function getConflictDetails(pr: PR) {
 }
 
 async function main() {
+  console.log("Setting up git config...")
+  await setupGit()
+
   console.log("Setting up upstream remote...")
   await setupUpstream()
 
