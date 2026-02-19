@@ -11,6 +11,7 @@ interface PR {
 
 const REPO = "anomalyco/opencode"
 const UPSTREAM_URL = "https://github.com/anomalyco/opencode.git"
+const GITHUB_REPO = "alexyaroshuk/opencode"
 
 async function setupGit() {
   await $`git config user.name "${process.env.GITHUB_ACTOR || "GitHub Actions"}"`.quiet()
@@ -96,6 +97,22 @@ async function getConflictDetails(pr: PR) {
   }
 }
 
+async function triggerResolutionWorkflow(prNumber: number): Promise<{ success: boolean; runId?: string }> {
+  try {
+    const result = await $`gh api repos/${GITHUB_REPO}/actions/workflows/test-resolve-pr-conflicts.yml/dispatches \
+      -X POST \
+      -f ref=dev \
+      -f inputs[pr_number]=${prNumber} \
+      -f inputs[push_resolution]=true`.quiet()
+
+    console.log(`     🚀 Triggered resolution workflow for PR #${prNumber}`)
+    return { success: true }
+  } catch (e: any) {
+    console.log(`     ❌ Failed to trigger resolution: ${e?.message || "Unknown error"}`)
+    return { success: false }
+  }
+}
+
 async function main() {
   console.log("Setting up git config...")
   await setupGit()
@@ -149,6 +166,9 @@ async function main() {
           console.log(`      ... and ${details.files.length - 5} more`)
         }
       }
+
+      process.stdout.write("   🚀 Triggering auto-resolution... ")
+      await triggerResolutionWorkflow(pr.number)
     } else {
       console.log("⚠️ Check failed")
     }
@@ -158,16 +178,18 @@ async function main() {
   console.log("=".repeat(50))
   console.log(`\nSummary:`)
   console.log(`  ✅ Updated: ${updated.length}`)
-  console.log(`  ❌ Conflicts: ${conflicted.length}`)
+  console.log(`  ❌ Conflicts detected: ${conflicted.length}`)
+  console.log(`  🚀 Auto-resolution triggered: ${conflicted.length}`)
 
   if (conflicted.length > 0) {
-    console.log("\n❌ PRs with conflicts:")
+    console.log("\n🔄 PRs with auto-resolution triggered:")
     for (const { pr, details } of conflicted) {
       console.log(`  #${pr.number}: ${pr.title}`)
       if (details) {
         console.log(`     📁 ${details.files.length} files, ~${details.totalLines} lines`)
       }
     }
+    console.log("\n⏳ Check PR comments for resolution results")
   }
 
   console.log()
