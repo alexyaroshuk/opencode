@@ -269,40 +269,6 @@ async function attemptMerge(pr: PR): Promise<{ success: boolean; files: Conflict
   }
 }
 
-async function commentOnPR(files: ConflictFile[]) {
-  const resolved = files.filter((f) => f.resolved)
-  const unresolved = files.filter((f) => !f.resolved)
-
-  let body = `## 🤖 Automatic Conflict Resolution Report\n\n`
-
-  if (resolved.length > 0) {
-    body += `### ✅ Resolved (${resolved.length})\n\n`
-    for (const file of resolved) {
-      body += `- \`${file.path}\` (${file.strategy})\n`
-    }
-    body += "\n"
-  }
-
-  if (unresolved.length > 0) {
-    body += `### ❌ Needs Manual Resolution (${unresolved.length})\n\n`
-    for (const file of unresolved) {
-      body += `- \`${file.path}\`: ${file.error || "Manual resolution required"}\n`
-    }
-  }
-
-  if (shouldPush && resolved.length === files.length) {
-    body += "\n✅ All conflicts resolved and pushed to this PR."
-  } else if (resolved.length === files.length) {
-    body += "\n⚠️ All conflicts can be resolved automatically. Set `push_resolution: true` to apply."
-  }
-
-  try {
-    await $`gh pr comment ${prNumber} --repo ${REPO} --body ${body}`.quiet()
-  } catch (e) {
-    console.log("Failed to comment on PR:", e)
-  }
-}
-
 async function main() {
   console.log(`🔍 Testing conflict resolution for PR #${prNumber}\n`)
 
@@ -348,9 +314,6 @@ async function main() {
       console.log(`  ${icon} ${file.path} (${file.strategy}): ${status}`)
     }
   }
-
-  // Comment on PR
-  await commentOnPR(result.files)
 
   if (result.success) {
     console.log("\n✅ All conflicts resolved successfully!")
