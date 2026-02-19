@@ -117,7 +117,7 @@ async function resolveWithOurs(filePath: string): Promise<boolean> {
 
 async function resolveWithMerge(
   filePath: string,
-): Promise<{ success: boolean; hadConflicts: boolean; content?: string }> {
+): Promise<{ success: boolean; hadConflicts: boolean; content?: string; error?: string }> {
   try {
     // Read the conflicted file
     const file = Bun.file(filePath)
@@ -255,13 +255,15 @@ async function attemptMerge(pr: PR): Promise<{ success: boolean; files: Conflict
       console.log(`\n✅ Pushed resolved changes to PR #${pr.number}`)
     }
 
-    // Cleanup
+    // Cleanup - reset any changes before switching back
+    await $`git reset --hard`.nothrow().quiet()
     await $`git checkout ${currentBranch}`.quiet()
 
     return { success: allResolved, files }
   } catch (e: any) {
     // Cleanup on error
     await $`git merge --abort`.nothrow().quiet()
+    await $`git reset --hard`.nothrow().quiet()
     await $`git checkout ${currentBranch}`.nothrow().quiet()
     throw e
   }
