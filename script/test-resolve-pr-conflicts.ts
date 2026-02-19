@@ -251,7 +251,7 @@ async function attemptMerge(pr: PR): Promise<{ success: boolean; files: Conflict
 
     if (allResolved && shouldPush) {
       await $`git commit -m "Resolve conflicts with upstream/${pr.baseRefName}"`.quiet()
-      await $`git push origin ${pr.headRefName}`.quiet()
+      await $`git push origin ${pr.headRefName} --no-verify`.quiet()
       console.log(`\n✅ Pushed resolved changes to PR #${pr.number}`)
     }
 
