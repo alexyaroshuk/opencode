@@ -1,0 +1,41 @@
+name: test-resolve-multiple-prs
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_numbers:
+        description: 'Comma-separated list of PR numbers to resolve conflicts for (e.g., "13530,13531,13532")'
+        required: true
+        type: string
+      push_resolution:
+        description: "Push the resolved changes back to the PR branches"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  resolve-multiple:
+    if: github.repository_owner == 'alexyaroshuk'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Resolve multiple PR conflicts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
+          PUSH_RESOLUTION: ${{ github.event.inputs.push_resolution }}
+        run: bun script/test-resolve-multiple-prs.ts
