@@ -1,3 +1,12 @@
+> [!NOTE]
+> **This is a personal fork of [opencode](https://github.com/anomalyco/opencode)** showcasing features I contributed. The PRs are open and pending upstream review — in the meantime, this fork ships them.
+>
+> | Feature | Description | PR |
+> | ------- | ----------- | -- |
+> | View & restore archived sessions | Adds an "Archived Sessions" tab in Settings to browse and unarchive sessions across projects | [#15250](https://github.com/anomalyco/opencode/pull/15250) |
+> | Edit config files inside app | Adds a Config tab in Settings to edit `opencode.json` files directly in the desktop app with JSON validation | [#14617](https://github.com/anomalyco/opencode/pull/14617) |
+> | Marquee scroll for long sidebar titles | Sidebar session titles scroll horizontally on hover to reveal full text instead of truncating | [#13210](https://github.com/anomalyco/opencode/pull/13210) |
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
