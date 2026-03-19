@@ -320,6 +320,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_state_flags(window_state_flags())
