@@ -9,6 +9,7 @@
 #   - Optional details after a space following the handle.
 adamdotdevin
 -agusbasari29 AI PR slop
+alexyaroshuk
 ariane-emory
 edemaine
 -florianleibert
