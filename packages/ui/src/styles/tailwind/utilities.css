@@ -13,12 +13,30 @@
   mask-image: radial-gradient(circle 5px at calc(100% - 4px) 4px, transparent 5px, black 5.5px);
 }
 
+@utility badge-mask-tight {
+  -webkit-mask-image: radial-gradient(circle 5px at calc(100% - 2px) 2px, transparent 5px, black 5.5px);
+  mask-image: radial-gradient(circle 5px at calc(100% - 2px) 2px, transparent 5px, black 5.5px);
+}
+
 @utility truncate-start {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
   direction: rtl;
   text-align: left;
+}
+
+@utility marquee {
+  animation: marquee var(--marquee-duration, 2s) linear infinite alternate;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--overflow-width, 0px)));
+  }
 }
 
 @utility fade-up-text {
