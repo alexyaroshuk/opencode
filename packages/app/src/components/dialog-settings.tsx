@@ -85,6 +85,7 @@ export const DialogSettings: Component = () => {
         </Tabs.Content>
         <Tabs.Content value="config" class="no-scrollbar">
           <SettingsConfig />
+        </Tabs.Content>
         <Tabs.Content value="archive" class="no-scrollbar">
           <SettingsArchive />
         </Tabs.Content>
