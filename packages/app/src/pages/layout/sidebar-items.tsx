@@ -1,5 +1,6 @@
 import type { Message, Session, TextPart, UserMessage } from "@opencode-ai/sdk/v2/client"
 import { Avatar } from "@opencode-ai/ui/avatar"
+import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { HoverCard } from "@opencode-ai/ui/hover-card"
 import { Icon } from "@opencode-ai/ui/icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
@@ -9,7 +10,7 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { base64Encode } from "@opencode-ai/util/encode"
 import { getFilename } from "@opencode-ai/util/path"
 import { A, useNavigate, useParams } from "@solidjs/router"
-import { type Accessor, createMemo, For, type JSX, Match, onCleanup, Show, Switch } from "solid-js"
+import { type Accessor, createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup, Show, Switch } from "solid-js"
 import { useGlobalSync } from "@/context/global-sync"
 import { useLanguage } from "@/context/language"
 import { getAvatarColors, type LocalProject, useLayout } from "@/context/layout"
@@ -101,13 +102,23 @@ const SessionRow = (props: {
   warmPress: () => void
   warmFocus: () => void
   cancelHoverPrefetch: () => void
+  onHoverChange?: (hovered: boolean) => void
+  titleRef?: (el: HTMLSpanElement | undefined) => void
+  containerRef?: (el: HTMLDivElement | undefined) => void
+  marquee?: Accessor<boolean>
 }): JSX.Element => (
   <A
     href={`/${props.slug}/session/${props.session.id}`}
     class={`flex items-center justify-between gap-3 min-w-0 text-left w-full focus:outline-none transition-[padding] ${props.mobile ? "pr-7" : ""} group-hover/session:pr-7 group-focus-within/session:pr-7 group-active/session:pr-7 ${props.dense ? "py-0.5" : "py-1"}`}
     onPointerDown={props.warmPress}
-    onPointerEnter={props.warmHover}
-    onPointerLeave={props.cancelHoverPrefetch}
+    onPointerEnter={() => {
+      props.onHoverChange?.(true)
+      props.warmHover()
+    }}
+    onPointerLeave={() => {
+      props.onHoverChange?.(false)
+      props.cancelHoverPrefetch()
+    }}
     onFocus={props.warmFocus}
     onClick={() => {
       props.setHoverSession(undefined)
@@ -135,9 +146,25 @@ const SessionRow = (props: {
           </Match>
         </Switch>
       </div>
-      <span class="text-14-regular text-text-strong grow-1 min-w-0 overflow-hidden text-ellipsis truncate">
-        {props.session.title}
-      </span>
+      <div ref={props.containerRef} class="grow-1 min-w-0 overflow-hidden">
+        <span
+          ref={props.titleRef}
+          class="text-14-regular text-text-strong whitespace-nowrap"
+          classList={{
+            "inline-block marquee": props.marquee?.() ?? false,
+            "block overflow-hidden text-ellipsis": !(props.marquee?.() ?? false),
+          }}
+        >
+          {props.session.title}
+        </span>
+      </div>
+      <Show when={props.session.summary}>
+        {(summary) => (
+          <div class="group-hover/session:hidden group-active/session:hidden group-focus-within/session:hidden">
+            <DiffChanges changes={summary()} />
+          </div>
+        )}
+      </Show>
     </div>
   </A>
 )
@@ -274,6 +301,32 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
     const text = parts.find((part): part is TextPart => part?.type === "text" && !part.synthetic && !part.ignored)
     return text?.text
   }
+  const [itemHovered, setItemHovered] = createSignal(false)
+  const [overflows, setOverflows] = createSignal(false)
+  const marquee = createMemo(() => itemHovered() && overflows())
+
+  let titleRef: HTMLSpanElement | undefined
+  let containerRef: HTMLDivElement | undefined
+  createEffect(() => {
+    if (!titleRef || !containerRef || !itemHovered()) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!titleRef || !containerRef) return
+        const titleWidth = titleRef.scrollWidth
+        const containerWidth = containerRef.offsetWidth
+        if (titleWidth <= containerWidth) {
+          setOverflows(false)
+          return
+        }
+        const overflowWidth = titleWidth - containerWidth + 8
+        const duration = overflowWidth / 40
+        titleRef.style.setProperty("--overflow-width", `${overflowWidth}px`)
+        titleRef.style.setProperty("--marquee-duration", `${duration}s`)
+        setOverflows(true)
+      })
+    })
+  })
+
   const item = (
     <SessionRow
       session={props.session}
@@ -292,6 +345,14 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
       warmPress={() => warm(2, "high")}
       warmFocus={() => warm(2, "high")}
       cancelHoverPrefetch={cancelHoverPrefetch}
+      onHoverChange={setItemHovered}
+      titleRef={(el) => {
+        titleRef = el
+      }}
+      containerRef={(el) => {
+        containerRef = el
+      }}
+      marquee={marquee}
     />
   )
 
