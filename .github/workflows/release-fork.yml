@@ -75,7 +75,7 @@ jobs:
           uploadWorkflowArtifacts: true
           args: >-
             --target x86_64-pc-windows-msvc
-            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+            --config './src-tauri/tauri.fork.conf.json'
             --verbose
           tagName: v${{ inputs.version }}
           releaseName: v${{ inputs.version }}
