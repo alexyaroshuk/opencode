@@ -1,13 +1,11 @@
-import type { Message, Session, TextPart, UserMessage } from "@opencode-ai/sdk/v2/client"
+import type { Session } from "@opencode-ai/sdk/v2/client"
 import { Avatar } from "@opencode-ai/ui/avatar"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { HoverCard } from "@opencode-ai/ui/hover-card"
 import { Icon } from "@opencode-ai/ui/icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
-import { MessageNav } from "@opencode-ai/ui/message-nav"
 import { Spinner } from "@opencode-ai/ui/spinner"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
-import { base64Encode } from "@opencode-ai/util/encode"
 import { getFilename } from "@opencode-ai/util/path"
 import { A, useNavigate, useParams } from "@solidjs/router"
 import { type Accessor, createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup, Show, Switch } from "solid-js"
@@ -17,8 +15,9 @@ import { getAvatarColors, type LocalProject, useLayout } from "@/context/layout"
 import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
 import { messageAgentColor } from "@/utils/agent"
+import { sessionTitle } from "@/utils/session-title"
 import { sessionPermissionRequest } from "../session/composer/session-request-tree"
-import { hasProjectPermissions } from "./helpers"
+import { childSessionOnPath, hasProjectPermissions } from "./helpers"
 
 const OPENCODE_PROJECT_ID = "4b0ea68d7af9a6031a7ffda7ad66e0cb83315750"
 
@@ -39,6 +38,7 @@ export const ProjectIcon = (props: { project: LocalProject; class?: string; noti
   )
   const notify = createMemo(() => props.notify && (hasPermissions() || unseenCount() > 0))
   const name = createMemo(() => props.project.name || getFilename(props.project.worktree))
+
   return (
     <div class={`relative size-8 shrink-0 rounded ${props.class ?? ""}`}>
       <div class="size-full rounded overflow-clip">
@@ -73,13 +73,10 @@ export type SessionItemProps = {
   slug: string
   mobile?: boolean
   dense?: boolean
-  popover?: boolean
-  children: Map<string, string[]>
+  showTooltip?: boolean
+  showChild?: boolean
+  level?: number
   sidebarExpanded: Accessor<boolean>
-  sidebarHovering: Accessor<boolean>
-  nav: Accessor<HTMLElement | undefined>
-  hoverSession: Accessor<string | undefined>
-  setHoverSession: (id: string | undefined) => void
   clearHoverProjectSoon: () => void
   prefetchSession: (session: Session, priority?: "high" | "low") => void
   archiveSession: (session: Session) => Promise<void>
@@ -95,10 +92,8 @@ const SessionRow = (props: {
   hasPermissions: Accessor<boolean>
   hasError: Accessor<boolean>
   unseenCount: Accessor<number>
-  setHoverSession: (id: string | undefined) => void
   clearHoverProjectSoon: () => void
   sidebarOpened: Accessor<boolean>
-  warmHover: () => void
   warmPress: () => void
   warmFocus: () => void
   cancelHoverPrefetch: () => void
@@ -215,7 +210,6 @@ const SessionHoverPreview = (props: {
 
 export const SessionItem = (props: SessionItemProps): JSX.Element => {
   const params = useParams()
-  const navigate = useNavigate()
   const layout = useLayout()
   const language = useLanguage()
   const notification = useNotification()
@@ -245,17 +239,12 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
     )
   })
 
-  const tint = createMemo(() => {
-    return messageAgentColor(sessionStore.message[props.session.id], sessionStore.agent)
+  const tint = createMemo(() => messageAgentColor(sessionStore.message[props.session.id], sessionStore.agent))
+  const tooltip = createMemo(() => props.showTooltip ?? (props.mobile || !props.sidebarExpanded()))
+  const currentChild = createMemo(() => {
+    if (!props.showChild) return
+    return childSessionOnPath(sessionStore.session, props.session.id, params.id)
   })
-
-  const hoverMessages = createMemo(() =>
-    sessionStore.message[props.session.id]?.filter((message): message is UserMessage => message.role === "user"),
-  )
-  const hoverReady = createMemo(() => hoverMessages() !== undefined)
-  const hoverAllowed = createMemo(() => !props.mobile && props.sidebarExpanded())
-  const hoverEnabled = createMemo(() => (props.popover ?? true) && hoverAllowed())
-  const isActive = createMemo(() => props.session.id === params.id)
 
   const warm = (span: number, priority: "high" | "low") => {
     const nav = props.navList?.()
@@ -277,6 +266,7 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
     }
   }
 
+<<<<<<< HEAD
   const hoverPrefetch = {
     current: undefined as ReturnType<typeof setTimeout> | undefined,
   }
@@ -327,6 +317,8 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
     })
   })
 
+=======
+>>>>>>> upstream-dev
   const item = (
     <SessionRow
       session={props.session}
@@ -338,10 +330,8 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
       hasPermissions={hasPermissions}
       hasError={hasError}
       unseenCount={unseenCount}
-      setHoverSession={props.setHoverSession}
       clearHoverProjectSoon={props.clearHoverProjectSoon}
       sidebarOpened={layout.sidebar.opened}
-      warmHover={scheduleHoverPrefetch}
       warmPress={() => warm(2, "high")}
       warmFocus={() => warm(2, "high")}
       cancelHoverPrefetch={cancelHoverPrefetch}
@@ -416,6 +406,13 @@ export const SessionItem = (props: SessionItemProps): JSX.Element => {
           />
         </Tooltip>
       </div>
+      <Show when={currentChild()}>
+        {(child) => (
+          <div class="w-full">
+            <SessionItem {...props} session={child()} level={(props.level ?? 0) + 1} />
+          </div>
+        )}
+      </Show>
     </div>
   )
 }
@@ -426,7 +423,6 @@ export const NewSessionItem = (props: {
   dense?: boolean
   sidebarExpanded: Accessor<boolean>
   clearHoverProjectSoon: () => void
-  setHoverSession: (id: string | undefined) => void
 }): JSX.Element => {
   const layout = useLayout()
   const language = useLanguage()
@@ -438,7 +434,6 @@ export const NewSessionItem = (props: {
       end
       class={`flex items-center justify-between gap-3 min-w-0 text-left w-full focus:outline-none ${props.dense ? "py-0.5" : "py-1"}`}
       onClick={() => {
-        props.setHoverSession(undefined)
         if (layout.sidebar.opened()) return
         props.clearHoverProjectSoon()
       }}
