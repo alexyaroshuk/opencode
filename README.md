@@ -1,5 +1,5 @@
 > [!NOTE]
-> **This is a personal fork of [opencode](https://github.com/anomalyco/opencode)** that I maintain for my own use. The features and fixes below live here because I rely on them day-to-day. I've opened PRs upstream but they've been sitting without review, so the fork ships them in the meantime. You're welcome to use it, but it's not a maintained product.
+> **Personal fork of [opencode](https://github.com/anomalyco/opencode)** with features and fixes I use daily. PRs are open upstream; the fork ships them in the meantime. Use at your own risk.
 >
 > | Feature | Description | PR |
 > | ------- | ----------- | -- |
