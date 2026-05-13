@@ -14,7 +14,10 @@ const { installerIcon: _installerIcon, installerHeaderIcon: _installerHeaderIcon
 
 const config: Configuration = {
   ...resolved,
-  publish: { provider: "github", owner, repo, channel: "latest" },
+  // releaseType "release" lets electron-builder upload to an existing
+  // published release. Default "draft" silently skips uploads when the
+  // release already exists in a non-draft state.
+  publish: { provider: "github", owner, repo, channel: "latest", releaseType: "release" },
   win: {
     ...resolved.win,
     icon: "resources/icons/icon.png",
