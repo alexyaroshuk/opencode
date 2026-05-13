@@ -69,7 +69,11 @@ jobs:
           OPENCODE_CHANNEL: prod
 
       - name: Package and publish
-        run: npx electron-builder --win --x64 --publish always --config electron-builder.config.ts
+        run: >-
+          npx electron-builder --win --x64 --publish always
+          --config electron-builder.config.ts
+          -c.publish.owner=${{ github.repository_owner }}
+          -c.publish.repo=${{ github.event.repository.name }}
         working-directory: packages/desktop
         timeout-minutes: 60
         env:
