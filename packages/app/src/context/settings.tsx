@@ -31,6 +31,7 @@ export interface Settings {
     showReasoningSummaries: boolean
     shellToolPartsExpanded: boolean
     editToolPartsExpanded: boolean
+    sendWithModEnter: boolean
     showSessionProgressBar: boolean
   }
   updates: {
@@ -116,6 +117,7 @@ const defaultSettings: Settings = {
     showReasoningSummaries: false,
     shellToolPartsExpanded: false,
     editToolPartsExpanded: false,
+    sendWithModEnter: false,
     showSessionProgressBar: true,
   },
   updates: {
@@ -228,6 +230,10 @@ export const { use: useSettings, provider: SettingsProvider } = createSimpleCont
         ),
         setEditToolPartsExpanded(value: boolean) {
           setStore("general", "editToolPartsExpanded", value)
+        },
+        sendWithModEnter: withFallback(() => store.general?.sendWithModEnter, defaultSettings.general.sendWithModEnter),
+        setSendWithModEnter(value: boolean) {
+          setStore("general", "sendWithModEnter", value)
         },
         showSessionProgressBar: withFallback(
           () => store.general?.showSessionProgressBar,
