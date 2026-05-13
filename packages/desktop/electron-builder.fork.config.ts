@@ -10,9 +10,16 @@ if (!owner || !repo) {
 
 const resolved = (await Promise.resolve(baseConfig)) as Configuration
 
+const { installerIcon: _installerIcon, installerHeaderIcon: _installerHeaderIcon, ...nsisRest } = resolved.nsis ?? {}
+
 const config: Configuration = {
   ...resolved,
   publish: { provider: "github", owner, repo, channel: "latest" },
+  win: {
+    ...resolved.win,
+    icon: "resources/icons/icon.png",
+  },
+  nsis: nsisRest,
 }
 
 export default config
