@@ -74,18 +74,36 @@ export async function read(): Promise<Content | undefined> {
     }
   }
 
-  // Windows/WSL: probe clipboard for images via PowerShell.
-  // Bracketed paste can't carry image data so we read it directly.
+  // Windows/WSL: read image and text via PowerShell. clipboardy's bundled .exe
+  // fails silently under Bun on Windows, so we bypass it for text too.
   if (os === "win32" || release().includes("WSL")) {
     const script =
-      "Add-Type -AssemblyName System.Windows.Forms; $img = [System.Windows.Forms.Clipboard]::GetImage(); if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); [System.Convert]::ToBase64String($ms.ToArray()) }"
-    const base64 = await Process.text(["powershell.exe", "-NonInteractive", "-NoProfile", "-command", script], {
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
+      "Add-Type -AssemblyName System.Windows.Forms; " +
+      "$img = [System.Windows.Forms.Clipboard]::GetImage(); " +
+      "if ($img) { " +
+      "  $ms = New-Object System.IO.MemoryStream; " +
+      "  $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); " +
+      "  Write-Output ('IMG:' + [System.Convert]::ToBase64String($ms.ToArray())) " +
+      "} else { " +
+      "  $t = Get-Clipboard -Raw; " +
+      "  if ($t) { Write-Output ('TXT:' + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($t))) } " +
+      "}"
+    const result = await Process.text(["powershell.exe", "-NonInteractive", "-NoProfile", "-Command", script], {
       nothrow: true,
     })
-    if (base64.text) {
-      const imageBuffer = Buffer.from(base64.text.trim(), "base64")
+    const raw = result.text.trim()
+    if (raw.startsWith("IMG:")) {
+      const imageBuffer = Buffer.from(raw.slice(4), "base64")
       if (imageBuffer.length > 0) {
         return { data: imageBuffer.toString("base64"), mime: "image/png" }
+      }
+    }
+    if (raw.startsWith("TXT:")) {
+      const decoded = Buffer.from(raw.slice(4), "base64").toString("utf8")
+      const normalized = decoded.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n$/, "")
+      if (normalized.length > 0) {
+        return { data: normalized, mime: "text/plain" }
       }
     }
   }
