@@ -1,7 +1,7 @@
 import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
 import { RadioGroup } from "@opencode-ai/ui/radio-group"
-import { getFilename } from "@opencode-ai/util/path"
+import { getFilename } from "@opencode-ai/core/util/path"
 import { Component, For, Show, createMemo, createResource, createSignal } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { useGlobalSDK } from "@/context/global-sdk"
