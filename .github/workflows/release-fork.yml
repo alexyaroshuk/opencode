@@ -78,8 +78,44 @@ jobs:
           GH_OWNER: ${{ github.repository_owner }}
           GH_REPO: ${{ github.event.repository.name }}
 
-  release-notes:
+  publish-cli-fork:
     needs: build-desktop-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: opencode-cli-windows
+          path: cli-dist
+
+      - name: Rename binary and repackage
+        run: |
+          set -euo pipefail
+          # The artifact preserves the dist/opencode-windows-x64/ directory tree.
+          BIN_DIR=$(find cli-dist -type d -name 'opencode-windows-x64' | head -n1)
+          if [ -z "$BIN_DIR" ] || [ ! -f "$BIN_DIR/bin/opencode.exe" ]; then
+            echo "opencode.exe not found in artifact"
+            find cli-dist -maxdepth 4
+            exit 1
+          fi
+          mv "$BIN_DIR/bin/opencode.exe" "$BIN_DIR/bin/opencode-fork.exe"
+          (cd "$BIN_DIR/bin" && zip -r "$GITHUB_WORKSPACE/opencode-fork-windows-x64.zip" .)
+          ls -la opencode-fork-windows-x64.zip
+
+      - name: Upload CLI + installer to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ inputs.version }}"
+          gh release upload "$TAG" \
+            opencode-fork-windows-x64.zip \
+            script/install-fork.ps1 \
+            --clobber
+
+  release-notes:
+    needs: publish-cli-fork
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

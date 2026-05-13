@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(git log *)",
+      "Bash(git checkout *)",
+      "Bash(curl -s https://raw.githubusercontent.com/anomalyco/opencode/dev/CONTRIBUTING.md)"
     ]
   }
 }
