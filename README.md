@@ -3,9 +3,24 @@
 >
 > | Feature | Description | PR |
 > | ------- | ----------- | -- |
+> | Send with Ctrl+Enter (desktop) | New General → Input toggle. Enter inserts a newline; Ctrl/Cmd+Enter sends the message. Default off | [#13637](https://github.com/anomalyco/opencode/pull/13637) |
 > | View & restore archived sessions | Adds an "Archived Sessions" tab in Settings to browse and unarchive sessions across projects | [#15250](https://github.com/anomalyco/opencode/pull/15250) |
 > | Edit config files inside app | Adds a Config tab in Settings to edit `opencode.json` files directly in the desktop app with JSON validation | [#14617](https://github.com/anomalyco/opencode/pull/14617) |
 > | Marquee scroll for long sidebar titles | Sidebar session titles scroll horizontally on hover to reveal full text instead of truncating | [#13210](https://github.com/anomalyco/opencode/pull/13210) |
+>
+> **Fixes**
+>
+> | Fix | Description | PR |
+> | --- | ----------- | -- |
+> | TUI: `Ctrl+V` text paste on Windows | Pasting text in the TUI prompt was a no-op under Bun on Windows. Now reads text via PowerShell `Get-Clipboard -Raw` alongside the existing image probe | [#97](https://github.com/alexyaroshuk/opencode/pull/97) |
+>
+> ### Install the fork CLI (Windows)
+>
+> ```powershell
+> iwr -useb https://github.com/alexyaroshuk/opencode/releases/latest/download/install-fork.ps1 | iex
+> ```
+>
+> Installs `opencode-fork.exe` to `%LOCALAPPDATA%\opencode-fork` and adds it to PATH. Coexists with upstream `opencode`. Open a new shell, run `opencode-fork`.
 
 <p align="center">
   <a href="https://opencode.ai">
