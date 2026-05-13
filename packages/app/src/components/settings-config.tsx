@@ -96,13 +96,21 @@ export const SettingsConfig: Component = () => {
   })
 
   const safeReadConfigFile = async (path: string): Promise<string | null> => {
-    const content = await platform.readConfigFile?.(path)
-    return content ?? null
+    try {
+      const content = await platform.readConfigFile?.(path)
+      return content ?? null
+    } catch {
+      return null
+    }
   }
 
   const safeWriteConfigFile = async (path: string, content: string): Promise<string | null> => {
-    const err = await platform.writeConfigFile?.(path, content)
-    return err ? String(err) : null
+    try {
+      await platform.writeConfigFile?.(path, content)
+      return null
+    } catch (e) {
+      return String(e)
+    }
   }
 
   const findProjectConfig = async (worktree: string): Promise<{ path: string; content: string } | null> => {

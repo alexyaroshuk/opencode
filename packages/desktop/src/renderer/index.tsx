@@ -266,6 +266,12 @@ const createPlatform = (): Platform => {
         type: "image/png",
       })
     },
+
+    readConfigFile: (path: string) => window.api.readConfigFile(path),
+
+    writeConfigFile: async (path: string, content: string) => {
+      await window.api.writeConfigFile(path, content)
+    },
   }
 }
 

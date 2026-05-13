@@ -76,4 +76,6 @@ export type ElectronAPI = {
   checkUpdate: () => Promise<{ updateAvailable: boolean; version?: string }>
   installUpdate: () => Promise<void>
   setBackgroundColor: (color: string) => Promise<void>
+  readConfigFile: (path: string) => Promise<string>
+  writeConfigFile: (path: string, content: string) => Promise<void>
 }
