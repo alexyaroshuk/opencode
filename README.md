@@ -14,13 +14,29 @@
 > | --- | ----------- | -- |
 > | TUI: `Ctrl+V` text paste on Windows | Pasting text in the TUI prompt was a no-op under Bun on Windows. Now reads text via PowerShell `Get-Clipboard -Raw` alongside the existing image probe | [#97](https://github.com/alexyaroshuk/opencode/pull/97) |
 >
-> ### Install the fork CLI (Windows)
+> ### Install (Windows)
+>
+> **TUI / CLI** — open PowerShell, paste, hit Enter:
 >
 > ```powershell
 > iwr -useb https://github.com/alexyaroshuk/opencode/releases/latest/download/install-fork.ps1 | iex
 > ```
 >
-> Installs `opencode-fork.exe` to `%LOCALAPPDATA%\opencode-fork` and adds it to PATH. Coexists with upstream `opencode`. Open a new shell, run `opencode-fork`.
+> Downloads the latest fork release, extracts `opencode-fork.exe` to `%LOCALAPPDATA%\opencode-fork`, adds it to your user PATH. Coexists with upstream `opencode`. Open a new shell and run `opencode-fork`.
+>
+> **Desktop app** — download the installer from the [latest release](https://github.com/alexyaroshuk/opencode/releases/latest) and run it:
+>
+> - `opencode-desktop-win-x64.exe` — Electron installer for the desktop app
+>
+> **Release assets at a glance**
+>
+> | File | What it is |
+> | ---- | ---------- |
+> | `install-fork.ps1` | PowerShell installer for the CLI/TUI. Run it via the one-liner above |
+> | `opencode-fork-windows-x64.zip` | Windows CLI/TUI binary. The PowerShell installer downloads this for you, but you can also unzip it manually and drop `opencode-fork.exe` anywhere on your PATH |
+> | `opencode-desktop-win-x64.exe` | Desktop app installer (Electron). Run it to install the GUI |
+> | `latest.yml` | Update manifest used by the desktop app's auto-updater — ignore |
+> | Source code (zip/tar.gz) | GitHub-generated source archives — ignore unless you want to build from source |
 
 <p align="center">
   <a href="https://opencode.ai">
